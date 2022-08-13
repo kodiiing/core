@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
-	"github.com/meilisearch/meilisearch-go"
+	"github.com/typesense/typesense-go/typesense"
 )
 
 func main() {
@@ -31,14 +31,14 @@ func main() {
 		databaseUrl = "postgres://root@localhost:5432/kodiiing?sslmode=disable"
 	}
 
-	meilisearchUrl, ok := os.LookupEnv("MEILISEARCH_URL")
+	searchUrl, ok := os.LookupEnv("SEARCH_URL")
 	if !ok {
-		meilisearchUrl = "http://localhost:7700"
+		searchUrl = "http://localhost:8108"
 	}
 
-	meilisearchApiKey, ok := os.LookupEnv("MEILISEARCH_API_KEY")
+	searchApiKey, ok := os.LookupEnv("SEARCH_API_KEY")
 	if !ok {
-		meilisearchApiKey = ""
+		searchApiKey = ""
 	}
 
 	db, err := sql.Open("postgres", databaseUrl)
@@ -53,10 +53,10 @@ func main() {
 		}
 	}(db)
 
-	search := meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   meilisearchUrl,
-		APIKey: meilisearchApiKey,
-	})
+	search := typesense.NewClient(
+		typesense.WithServer(searchUrl),
+		typesense.WithAPIKey(searchApiKey),
+	)
 
 	app := chi.NewRouter()
 
