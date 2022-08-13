@@ -10,11 +10,16 @@ import (
 	"syscall"
 	"time"
 
+	auth_service "kodiiing/auth/service"
+	auth_stub "kodiiing/auth/stub"
+	codereview_service "kodiiing/codereview/service"
+	codereview_stub "kodiiing/codereview/stub"
 	hack_service "kodiiing/hack/service"
 	hack_stub "kodiiing/hack/stub"
 	user_service "kodiiing/user/service"
 	user_stub "kodiiing/user/stub"
 
+	"github.com/allegro/bigcache/v3"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
 	"github.com/typesense/typesense-go/typesense"
@@ -48,7 +53,7 @@ func main() {
 
 	db, err := sql.Open("postgres", databaseUrl)
 	if err != nil {
-		log.Printf("Error opening database connection: %v", err)
+		log.Fatalf("Error opening database connection: %v", err)
 		return
 	}
 	defer func(db *sql.DB) {
@@ -63,10 +68,24 @@ func main() {
 		typesense.WithAPIKey(searchApiKey),
 	)
 
+	memory, err := bigcache.NewBigCache(bigcache.DefaultConfig(time.Minute * 3))
+	if err != nil {
+		log.Fatalf("Error creating memory cache: %v", err)
+		return
+	}
+	defer func(memory *bigcache.BigCache) {
+		err := memory.Close()
+		if err != nil {
+			log.Printf("Error closing memory cache: %v", err)
+		}
+	}(memory)
+
 	app := chi.NewRouter()
 
 	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(env, db, search)))
 	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(env, db)))
+	app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(env, db, memory)))
+	app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(env, db)))
 
 	server := &http.Server{
 		Addr:         ":" + port,
