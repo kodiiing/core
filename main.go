@@ -10,6 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	hack_service "kodiiing/hack/service"
+	hack_stub "kodiiing/hack/stub"
+	user_service "kodiiing/user/service"
+	user_stub "kodiiing/user/stub"
+
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
 	"github.com/typesense/typesense-go/typesense"
@@ -59,6 +64,9 @@ func main() {
 	)
 
 	app := chi.NewRouter()
+
+	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(env, db, search)))
+	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(env, db)))
 
 	server := &http.Server{
 		Addr:         ":" + port,
