@@ -37,6 +37,20 @@ type User struct {
 	RegisteredAt time.Time
 }
 
+type Repository struct {
+	ID             int64
+	Provider       Provider
+	Name           string
+	URL            *url.URL
+	Description    string
+	Fork           bool
+	ForksCount     int64
+	StarsCount     int64
+	OwnerUsername  string
+	CreatedAt      time.Time
+	LastActivityAt time.Time
+}
+
 type Authenticate interface {
 	Authenticate(ctx context.Context, accessToken string) (*User, error)
 }
