@@ -75,3 +75,5 @@ CREATE TABLE IF NOT EXISTS "user_accesstoken" (
     updated_by VARCHAR(63) NOT NULL DEFAULT 'system',
     CONSTRAINT "user_accesstoken_user_id_fkey" FOREIGN KEY (user_id) REFERENCES "users" (id) ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS "user_accesstoken_user_id" ON "user_accesstoken" (user_id);
