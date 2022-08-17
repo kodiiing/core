@@ -3,6 +3,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"time"
 )
@@ -13,6 +14,10 @@ const (
 	ProviderGithub Provider = iota
 	ProviderGitlab
 )
+
+func (p Provider) ToUint8() uint8 {
+	return uint8(p)
+}
 
 type User struct {
 	ID       int64
@@ -54,3 +59,11 @@ type Repository struct {
 type Authenticate interface {
 	Authenticate(ctx context.Context, accessToken string) (*User, error)
 }
+
+// ErrUserNotFound is returned when there is a query to the database
+// to find a user, yet the user was not found
+var ErrUserNotFound = errors.New("user not found")
+
+// ErrParameterEmpty is returned when a parameter is empty
+// for a function call
+var ErrParameterEmpty = errors.New("empty parameter")
