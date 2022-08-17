@@ -42,15 +42,27 @@ services:
       SERVICE_9042_NAME: ycql
       SERVICE_6379_NAME: yedis
       SERVICE_9000_NAME: yb-tserver
+    healthcheck:
+      test: "yb-ts-cli is_server_ready | grep 'server is ready'"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     depends_on:
       - yb-master
 
   typesense:
-    image: typesense/typesense:0.23.1
-    command: ./typesense-server --data-dir=/data --api-key=searchkey
+    build: ./dockerfiles/typesense
+    command: --data-dir=/data --api-key=searchkey
     ports:
       - "8108:8108"
     restart: on-failure:10
+    healthcheck:
+      test: "curl -f http://localhost:8108/health || exit"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     volumes:
       - typesense-data:/data
 
