@@ -52,7 +52,9 @@ services:
       - yb-master
 
   typesense:
-    build: ./dockerfiles/typesense
+    image: typesense/typesense:0.24.0.rcn17
+    container_name: typesense-0-24-0-rcn17
+    # build: ./dockerfiles/typesense
     command: --data-dir=/data --api-key=searchkey
     ports:
       - "8108:8108"
