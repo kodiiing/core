@@ -14,6 +14,7 @@ import (
 	auth_stub "kodiiing/auth/stub"
 	codereview_service "kodiiing/codereview/service"
 	codereview_stub "kodiiing/codereview/stub"
+	hack_provider "kodiiing/hack/provider"
 	hack_service "kodiiing/hack/service"
 	hack_stub "kodiiing/hack/stub"
 	user_service "kodiiing/user/service"
@@ -79,6 +80,19 @@ func main() {
 			log.Printf("Error closing memory cache: %v", err)
 		}
 	}(memory)
+
+	//context
+	ctx := context.Background()
+	//schema migration (YugaByte/PGSQL)
+	errMigrateSchema := hack_provider.MigrateYugabyte(ctx, db)
+	if errMigrateSchema != nil {
+		log.Fatalf("failed to migrate: %v", errMigrateSchema)
+	}
+	//Collection schema (Typesense)
+	errCreateCollection := hack_provider.CreateCollections(ctx, search)
+	if errCreateCollection != nil {
+		log.Fatalf("failed to migrate: %v", errMigrateSchema)
+	}
 
 	app := chi.NewRouter()
 
