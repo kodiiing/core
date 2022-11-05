@@ -84,7 +84,7 @@ func main() {
 	//context
 	ctx := context.Background()
 	//schema migration (YugaByte/PGSQL)
-	errMigrateSchema := hack_provider.MigrateYugabyte(ctx, db)
+	errMigrateSchema := hack_provider.MigrateHackSQL(ctx, db)
 	if errMigrateSchema != nil {
 		log.Fatalf("failed to migrate: %v", errMigrateSchema)
 	}
