@@ -82,7 +82,7 @@ func main() {
 	}(memory)
 
 	//context
-	ctx := context.Background()
+	ctx := context.TODO()
 	//schema migration (YugaByte/PGSQL)
 	errMigrateSchema := hack_provider.MigrateHackSQL(ctx, db)
 	if errMigrateSchema != nil {
