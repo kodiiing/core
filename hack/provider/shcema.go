@@ -12,7 +12,7 @@ import (
 	"github.com/typesense/typesense-go/typesense/api"
 )
 
-func MigrateYugabyte(ctx context.Context, d *sql.DB) *hack_stub.HackServiceError {
+func MigrateHackSQL(ctx context.Context, d *sql.DB) *hack_stub.HackServiceError {
 	db, err := d.Conn(ctx)
 	if err != nil {
 		return &hack_stub.HackServiceError{StatusCode: 500, Error: fmt.Errorf("message err failed to connect to database:  %w", err)}
