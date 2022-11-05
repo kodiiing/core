@@ -15,7 +15,7 @@ import (
 func MigrateHackSQL(ctx context.Context, d *sql.DB) *hack_stub.HackServiceError {
 	db, err := d.Conn(ctx)
 	if err != nil {
-		return &hack_stub.HackServiceError{StatusCode: 500, Error: fmt.Errorf("message err failed to connect to database:  %w", err)}
+		return &hack_stub.HackServiceError{StatusCode: 500, Error: fmt.Errorf("message err failed to connect to database:  %s", err.Error())}
 	}
 	defer func() {
 		err := db.Close()
@@ -24,13 +24,13 @@ func MigrateHackSQL(ctx context.Context, d *sql.DB) *hack_stub.HackServiceError 
 		}
 	}()
 
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
-		return &hack_stub.HackServiceError{StatusCode: 500, Error: fmt.Errorf("failed to begin transaction: %w", err)}
+		return &hack_stub.HackServiceError{StatusCode: 500, Error: fmt.Errorf("failed to begin transaction: %s", err.Error())}
 	}
 	defer func() {
 		if errRollback := tx.Rollback(); errRollback != nil {
-			log.Printf("message err rollback create new hack post: %v", err.Error())
+			log.Printf("rollback error : %s", errRollback.Error())
 		}
 	}()
 
