@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"database/sql"
+	auth_jwt "kodiiing/auth/jwt"
+	auth_middleware "kodiiing/auth/middleware"
 	"log"
 	"net/http"
 	"os"
@@ -94,9 +97,28 @@ func main() {
 		log.Fatalf("failed to migrate: %v", errMigrateSchema)
 	}
 
+	accessPublicKey, accessPrivateKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		log.Fatalf("failed to generate access key pair: %v", err)
+	}
+
+	refreshPublicKey, refreshPrivateKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		log.Fatalf("failed to generate refresh key pair: %v", err)
+	}
+
+	//start hacks module
+	hackJwt := auth_jwt.NewJwt(accessPrivateKey, accessPublicKey, refreshPrivateKey, refreshPublicKey, "kodiiing", "user", "kodiiing")
+	hackAuthService := auth_service.NewAuthService(env, db, memory)
+	hackAuthMiddleware := auth_middleware.NewAuthMiddleware(hackAuthService, hackJwt)
+	hackProviderTypesense := hack_provider.NewHackTypesense(search)
+	hackProviderSQL := hack_provider.NewHackYugabyte(db)
+	hackService := hack_service.NewHackService(env, hackAuthMiddleware, *hackProviderSQL, *hackProviderTypesense)
+	//end hacks module
+
 	app := chi.NewRouter()
 
-	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(env, db, search)))
+	app.Mount("/Hack", hack_stub.NewHackServiceServer(hackService))
 	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(env, db)))
 	app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(env, db, memory)))
 	app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(env, db)))
