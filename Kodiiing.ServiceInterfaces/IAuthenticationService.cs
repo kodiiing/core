@@ -2,12 +2,11 @@
 using Kodiiing.Models.User;
 using Kodiiing.Primitives;
 
-namespace Kodiiing.ServiceInterfaces
+namespace Kodiiing.ServiceInterfaces;
+
+public interface IAuthenticationService
 {
-    public interface IAuthenticationService
-    {
-        Task<User> AuthenticateAsync(string accessToken, CancellationToken cancellationToken);
-        Task<JWT> LoginAsync(GitProvider gitProvider, string accessCode, CancellationToken cancellationToken);
-        Task LogoutAsync(string accessToken);
-    }
+    Task<UserAggregate> Authenticate(string accessToken, CancellationToken cancellationToken);
+    Task<JWT> Login(GitProvider gitProvider, string accessCode, CancellationToken cancellationToken);
+    Task Logout(string accessToken);
 }

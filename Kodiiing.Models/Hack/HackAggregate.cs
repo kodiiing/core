@@ -2,7 +2,7 @@
 
 namespace Kodiiing.Models.Hack
 {
-    public class Hack
+    public class HackAggregate
     {
         public required Guid Id { get; set; }
         public required string Title { get; set; }

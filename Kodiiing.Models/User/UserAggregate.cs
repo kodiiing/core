@@ -2,7 +2,7 @@
 
 namespace Kodiiing.Models.User
 {
-    public class User
+    public class UserAggregate
     {
         public required int Id { get; set; }
         public required GitProvider GitProvider { get; set; }

@@ -2,7 +2,7 @@
 
 namespace Kodiiing.Models.Course.Task
 {
-    public class Task
+    public class TaskAggregate
     {
         public required Guid Id { get; set; }
         public required string Title { get; set; }

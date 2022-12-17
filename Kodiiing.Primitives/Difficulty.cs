@@ -1,9 +1,12 @@
-﻿namespace Kodiiing.Primitives
+﻿namespace Kodiiing.Primitives;
+
+/// <summary>
+/// Specifies difficulty level of a task.
+/// </summary>
+public enum Difficulty
 {
-    public enum Difficulty
-    {
-        Easy,
-        Medium,
-        Hard
-    }
+    NotYetRated,
+    Easy,
+    Medium,
+    Hard
 }

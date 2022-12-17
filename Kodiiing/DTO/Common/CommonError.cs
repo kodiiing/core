@@ -1,16 +1,15 @@
 ﻿
 using System.Text.Json.Serialization;
 
-namespace Kodiiing.DTO.Common
-{
-    public class CommonError
-    {
-        [JsonPropertyName("message")]
-        public string Message { get; set; }
+namespace Kodiiing.DTO.Common;
 
-        public CommonError(string message)
-        {
-            Message = message;
-        }
+internal class CommonError
+{
+    [JsonPropertyName("message")]
+    public string Message { get; }
+
+    public CommonError(string message)
+    {
+        Message = message;
     }
 }

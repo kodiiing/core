@@ -1,17 +1,15 @@
-﻿namespace Kodiiing.Primitives
+﻿namespace Kodiiing.Primitives;
+
+public class ProgrammingLanguage
 {
+    public readonly string Language;
 
-    public class ProgrammingLanguage
+    private readonly IEnumerable<string> _validLanguages = new[] { "C#", "JavaScript", "Go" };
+    
+    public ProgrammingLanguage(string language)
     {
-        public readonly string Language;
+        if (!_validLanguages.Contains(language)) throw new ArgumentException("Invalid language", nameof(language));
 
-        private readonly IEnumerable<string> _validLanguages = new[] { "C#", "JavaScript", "Go" };
-        
-        public ProgrammingLanguage(string language)
-        {
-            if (!_validLanguages.Contains(language)) throw new ArgumentException("Invalid language", nameof(language));
-
-            Language = language;
-        }
-    };
-}
+        Language = language;
+    }
+};

@@ -27,7 +27,7 @@ public class AuthController : ControllerBase
     {
         if (loginRequest.AccessCode == null) return BadRequest(new CommonError("AccessCode is required"));
 
-        JWT token = await _authenticationService.LoginAsync(loginRequest.Provider, loginRequest.AccessCode,
+        JWT token = await _authenticationService.Login(loginRequest.Provider, loginRequest.AccessCode,
             cancellationToken);
 
         return Ok(token);
