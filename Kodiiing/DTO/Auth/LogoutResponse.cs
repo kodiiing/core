@@ -1,6 +1,6 @@
 ﻿namespace Kodiiing.DTO.Auth;
 
-public class LogoutResponse
+public sealed class LogoutResponse
 {
     
 }

@@ -2,8 +2,8 @@
 
 namespace Kodiiing.DTO.Hack;
 
-public class CreateResponse
+public sealed class CreateResponse
 {
     [JsonPropertyName("id")]
-    public string? Id { get; set; }
+    public required string Id { get; set; }
 }

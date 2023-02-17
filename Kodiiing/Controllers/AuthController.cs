@@ -25,7 +25,7 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(CommonError))]
     public async Task<IActionResult> LoginAsync([FromBody] LoginRequest loginRequest, CancellationToken cancellationToken)
     {
-        if (loginRequest.AccessCode == null) return BadRequest(new CommonError("AccessCode is required"));
+        if (loginRequest.AccessCode == null) return BadRequest(new CommonError { Message = "AccessCode is required" });
 
         JWT token = await _authenticationService.Login(loginRequest.Provider, loginRequest.AccessCode,
             cancellationToken);

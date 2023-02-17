@@ -3,13 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace Kodiiing.DTO.Common;
 
-internal class CommonError
+internal sealed class CommonError
 {
     [JsonPropertyName("message")]
-    public string Message { get; }
-
-    public CommonError(string message)
-    {
-        Message = message;
-    }
+    public required string Message { get; set; }
 }

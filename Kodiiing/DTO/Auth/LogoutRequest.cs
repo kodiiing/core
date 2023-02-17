@@ -4,4 +4,4 @@ using Kodiiing.Primitives;
 
 namespace Kodiiing.DTO.Auth;
 
-public class LogoutRequest : Authentication { }
+public sealed class LogoutRequest : Authentication { }

@@ -2,10 +2,10 @@
 
 namespace Kodiiing.DTO.Hack;
 
-public class UpvoteResponse
+public sealed class UpvoteResponse
 {
     [JsonPropertyName("voted")]
-    public bool Voted { get; set; }
+    public required bool Voted { get; set; }
     [JsonPropertyName("score")]
-    public int Score { get; set; }
+    public required int Score { get; set; }
 }

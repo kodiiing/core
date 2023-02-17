@@ -2,4 +2,4 @@
 
 namespace Kodiiing.DTO.CodeReview;
 
-public class GetAvailableTaskToReviewRequest : Authentication { }
+public sealed class GetAvailableTaskToReviewRequest : Authentication { }

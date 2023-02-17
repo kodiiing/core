@@ -1,6 +1,6 @@
 ﻿namespace Kodiiing.DTO.Hack;
 
-public class ListRequest
+public sealed class ListRequest
 {
     
 }

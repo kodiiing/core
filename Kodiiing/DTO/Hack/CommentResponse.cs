@@ -2,10 +2,10 @@
 
 namespace Kodiiing.DTO.Hack;
 
-public class CommentResponse
+public sealed class CommentResponse
 {
     [JsonPropertyName("hack_id")]
-    public string? HackId { get; set; }
+    public required string HackId { get; set; }
     [JsonPropertyName("comment_id")]
-    public string? CommentId { get; set; }
+    public required string CommentId { get; set; }
 }

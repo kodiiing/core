@@ -5,7 +5,7 @@ using Kodiiing.Primitives;
 
 namespace Kodiiing.DTO.Auth;
 
-public class LoginRequest
+public sealed class LoginRequest
 {
     [Required, JsonPropertyName("provider")]
     public GitProvider Provider { get; set; }
