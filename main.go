@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -24,9 +25,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
 	"github.com/typesense/typesense-go/typesense"
+	"github.com/urfave/cli/v2"
 )
 
-func main() {
+func ApiServer(ctx context.Context) error {
 	env, ok := os.LookupEnv("ENVIRONMENT")
 	if !ok {
 		env = "development"
@@ -37,25 +39,28 @@ func main() {
 		env = "5001"
 	}
 
+	// TODO: Modify this to acquire from configuration file
 	databaseUrl, ok := os.LookupEnv("DATABASE_URL")
 	if !ok {
 		databaseUrl = "postgres://root@localhost:5432/kodiiing?sslmode=disable"
 	}
 
+	// TODO: Modify this to acquire from configuration file
 	searchUrl, ok := os.LookupEnv("SEARCH_URL")
 	if !ok {
 		searchUrl = "http://localhost:8108"
 	}
 
+	// TODO: Modify this to acquire from configuration file
 	searchApiKey, ok := os.LookupEnv("SEARCH_API_KEY")
 	if !ok {
 		searchApiKey = ""
 	}
 
+	// TODO: Migrate to pgx (using pgxpool), if possible
 	db, err := sql.Open("postgres", databaseUrl)
 	if err != nil {
-		log.Fatalf("Error opening database connection: %v", err)
-		return
+		return fmt.Errorf("Error opening database connection: %w", err)
 	}
 	defer func(db *sql.DB) {
 		err := db.Close()
@@ -69,10 +74,10 @@ func main() {
 		typesense.WithAPIKey(searchApiKey),
 	)
 
+	// TODO: Make default eviction time configurable from the configuration file
 	memory, err := bigcache.NewBigCache(bigcache.DefaultConfig(time.Minute * 3))
 	if err != nil {
-		log.Fatalf("Error creating memory cache: %v", err)
-		return
+		return fmt.Errorf("Error creating memory cache: %w", err)
 	}
 	defer func(memory *bigcache.BigCache) {
 		err := memory.Close()
@@ -81,17 +86,16 @@ func main() {
 		}
 	}(memory)
 
-	//context
-	ctx := context.TODO()
+	// TODO: Move migration to a separate command using goose (https://github.com/pressly/goose)
 	//schema migration (YugaByte/PGSQL)
 	errMigrateSchema := hack_provider.MigrateHackSQL(ctx, db)
 	if errMigrateSchema != nil {
-		log.Fatalf("failed to migrate: %v", errMigrateSchema)
+		return fmt.Errorf("failed to migrate: %v", errMigrateSchema)
 	}
 	//Collection schema (Typesense)
 	errCreateCollection := hack_provider.CreateCollections(ctx, search)
 	if errCreateCollection != nil {
-		log.Fatalf("failed to migrate: %v", errMigrateSchema)
+		return fmt.Errorf("failed to migrate: %v", errMigrateSchema)
 	}
 
 	app := chi.NewRouter()
@@ -125,5 +129,85 @@ func main() {
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("error during shutting down server: %v", err)
+	}
+
+	return nil
+}
+
+var version string
+
+func App() *cli.App {
+	return &cli.App{
+		Name:        "Kodiiing Core",
+		HelpName:    "",
+		Usage:       "",
+		UsageText:   "",
+		ArgsUsage:   "",
+		Version:     version,
+		Description: "",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:      "configuration-file",
+				Required:  false,
+				Value:     "",
+				Aliases:   []string{"conf-file", "config-file"},
+				EnvVars:   []string{"CONFIGURATION_FILE"},
+				TakesFile: true,
+			},
+		},
+		Copyright: `   Copyright 2023  Kodiiing
+
+		Licensed under the Apache License, Version 2.0 (the "License");
+		you may not use this file except in compliance with the License.
+		You may obtain a copy of the License at
+	 
+			http://www.apache.org/licenses/LICENSE-2.0
+	 
+		Unless required by applicable law or agreed to in writing, software
+		distributed under the License is distributed on an "AS IS" BASIS,
+		WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+		See the License for the specific language governing permissions and
+		limitations under the License.
+	 `,
+		DefaultCommand: "server",
+		Commands: []*cli.Command{
+			{
+				Name:        "server",
+				Description: "Main entrypoint for Kodiiing Core. Spawns a HTTP server.",
+				ArgsUsage:   "",
+				Category:    "",
+				Action: func(c *cli.Context) error {
+					return ApiServer(c.Context)
+				},
+				Subcommands: []*cli.Command{},
+			},
+			{
+				Name:        "migrate",
+				Description: "Database migration",
+				Subcommands: []*cli.Command{
+					{
+						Name: "up",
+						Action: func(c *cli.Context) error {
+							// TODO: Create up migration using goose (https://github.com/pressly/goose)
+							return nil
+						},
+					},
+					{
+						Name: "down",
+						Action: func(c *cli.Context) error {
+							// TODO: Create down migration using goose (https://github.com/pressly/goose)
+							return nil
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func main() {
+	err := App().Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
