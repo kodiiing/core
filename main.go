@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"database/sql"
-	"fmt"
+	auth_jwt "kodiiing/auth/jwt"
+	auth_middleware "kodiiing/auth/middleware"
 	"log"
 	"net/http"
 	"os"
@@ -98,9 +100,28 @@ func ApiServer(ctx context.Context) error {
 		return fmt.Errorf("failed to migrate: %v", errMigrateSchema)
 	}
 
+	accessPublicKey, accessPrivateKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		log.Fatalf("failed to generate access key pair: %v", err)
+	}
+
+	refreshPublicKey, refreshPrivateKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		log.Fatalf("failed to generate refresh key pair: %v", err)
+	}
+
+	//start hacks module
+	hackJwt := auth_jwt.NewJwt(accessPrivateKey, accessPublicKey, refreshPrivateKey, refreshPublicKey, "kodiiing", "user", "kodiiing")
+	hackAuthService := auth_service.NewAuthService(env, db, memory)
+	hackAuthMiddleware := auth_middleware.NewAuthMiddleware(hackAuthService, hackJwt)
+	hackProviderTypesense := hack_provider.NewHackTypesense(search)
+	hackProviderSQL := hack_provider.NewHackYugabyte(db)
+	hackService := hack_service.NewHackService(env, hackAuthMiddleware, *hackProviderSQL, *hackProviderTypesense)
+	//end hacks module
+
 	app := chi.NewRouter()
 
-	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(env, db, search)))
+	app.Mount("/Hack", hack_stub.NewHackServiceServer(hackService))
 	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(env, db)))
 	app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(env, db, memory)))
 	app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(env, db)))
@@ -160,9 +181,9 @@ func App() *cli.App {
 		Licensed under the Apache License, Version 2.0 (the "License");
 		you may not use this file except in compliance with the License.
 		You may obtain a copy of the License at
-	 
+
 			http://www.apache.org/licenses/LICENSE-2.0
-	 
+
 		Unless required by applicable law or agreed to in writing, software
 		distributed under the License is distributed on an "AS IS" BASIS,
 		WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
