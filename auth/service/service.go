@@ -1,26 +1,25 @@
 package auth_service
 
 import (
-	"database/sql"
-
 	auth_aes "kodiiing/auth/aes"
 	auth_jwt "kodiiing/auth/jwt"
 
 	"github.com/allegro/bigcache/v3"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AuthService struct {
-	db          *sql.DB
+	pool        *pgxpool.Pool
 	memory      *bigcache.BigCache
 	aes         *auth_aes.Aes
 	jwt         *auth_jwt.AuthJwt
 	environment string
 }
 
-func NewAuthService(env string, db *sql.DB, memory *bigcache.BigCache) *AuthService {
+func NewAuthService(env string, pool *pgxpool.Pool, memory *bigcache.BigCache) *AuthService {
 	return &AuthService{
 		environment: env,
-		db:          db,
+		pool:        pool,
 		memory:      memory,
 	}
 }

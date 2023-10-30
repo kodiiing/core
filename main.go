@@ -4,56 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	hack_provider "kodiiing/hack/provider"
+	"os"
+	"time"
+
 	"github.com/allegro/bigcache/v3"
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
+	"github.com/rs/zerolog/log"
 	"github.com/typesense/typesense-go/typesense"
 	"github.com/urfave/cli/v2"
-	auth_service "kodiiing/auth/service"
-	auth_stub "kodiiing/auth/stub"
-	codereview_service "kodiiing/codereview/service"
-	codereview_stub "kodiiing/codereview/stub"
-	hack_provider "kodiiing/hack/provider"
-	hack_service "kodiiing/hack/service"
-	hack_stub "kodiiing/hack/stub"
-	user_service "kodiiing/user/service"
-	user_stub "kodiiing/user/stub"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 func ApiServer(ctx context.Context) error {
 
-	log.Printf("Context: %v", ctx.Value("configuration-file"))
 	config, err := GetConfig("configuration-file.yml")
 	if err != nil {
 		return fmt.Errorf("Error getting configuration file: %w", err)
 	}
 
-	// TODO: Modify this to acquire from configuration file
-	databaseUrl, ok := os.LookupEnv("DATABASE_URL")
-	if !ok {
-		databaseUrl = "postgres://root@localhost:5432/kodiiing?sslmode=disable"
-	}
-
 	searchUrl := fmt.Sprintf("%s:%s", config.Search.Host, config.Search.Port)
-
-	// TODO: Migrate to pgx (using pgxpool), if possible
-	db, err := sql.Open("postgres", databaseUrl)
-	if err != nil {
-		return fmt.Errorf("Error opening database connection: %w", err)
-	}
-	defer func(db *sql.DB) {
-		err := db.Close()
-		if err != nil {
-			log.Printf("Error closing database connection: %v", err)
-		}
-	}(db)
 
 	pgxConfig, err := pgxpool.ParseConfig(fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
@@ -67,10 +37,11 @@ func ApiServer(ctx context.Context) error {
 		return fmt.Errorf("error parsing database configuration: %w", err)
 	}
 
-	conn, err := pgxpool.NewWithConfig(ctx, pgxConfig)
+	pgxPool, err := pgxpool.NewWithConfig(ctx, pgxConfig)
 	if err != nil {
-		return fmt.Errorf("error creating database connection: %w", err)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
+	defer pgxPool.Close()
 
 	search := typesense.NewClient(
 		typesense.WithServer(searchUrl),
@@ -89,50 +60,44 @@ func ApiServer(ctx context.Context) error {
 		}
 	}(memory)
 
-	// TODO: Move migration to a separate command using goose (https://github.com/pressly/goose)
-	//schema migration (YugaByte/PGSQL)
-	errMigrateSchema := hack_provider.MigrateHackSQL(ctx, db)
-	if errMigrateSchema != nil {
-		return fmt.Errorf("failed to migrate: %v", errMigrateSchema)
-	}
 	//Collection schema (Typesense)
 	errCreateCollection := hack_provider.CreateCollections(ctx, search)
 	if errCreateCollection != nil {
-		return fmt.Errorf("failed to migrate: %v", errMigrateSchema)
+		return fmt.Errorf("failed to migrate: %v", errCreateCollection)
 	}
 
-	app := chi.NewRouter()
+	// app := chi.NewRouter()
 
-	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(config.Environment, db, search)))
-	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(config.Environment, db)))
-	app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(config.Environment, db, memory)))
-	app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(config.Environment, db)))
+	// app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(config.Environment, pgxPool, search)))
+	// app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(config.Environment, pgxPool)))
+	// app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(config.Environment, pgxPool, memory)))
+	// app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(config.Environment, pgxPool)))
 
-	server := &http.Server{
-		Addr:         ":" + config.Port,
-		Handler:      app,
-		ReadTimeout:  time.Second * 10,
-		WriteTimeout: time.Second * 10,
-		IdleTimeout:  time.Second * 15,
-	}
+	// server := &http.Server{
+	// 	Addr:         ":" + config.Port,
+	// 	Handler:      app,
+	// 	ReadTimeout:  time.Second * 10,
+	// 	WriteTimeout: time.Second * 10,
+	// 	IdleTimeout:  time.Second * 15,
+	// }
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGINT)
+	// sig := make(chan os.Signal, 1)
+	// signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGINT)
 
-	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("error during listening server: %v", err)
-		}
-	}()
+	// go func() {
+	// 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	// 		log.Printf("error during listening server: %v", err)
+	// 	}
+	// }()
 
-	<-sig
+	// <-sig
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer shutdownCancel()
+	// shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Second*10)
+	// defer shutdownCancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("error during shutting down server: %v", err)
-	}
+	// if err := server.Shutdown(shutdownCtx); err != nil {
+	// 	log.Printf("error during shutting down server: %v", err)
+	// }
 
 	return nil
 }
@@ -191,14 +156,78 @@ func App() *cli.App {
 					{
 						Name: "up",
 						Action: func(c *cli.Context) error {
-							// TODO: Create up migration using goose (https://github.com/pressly/goose)
+							config, err := GetConfig(c.String("configuration-file"))
+							if err != nil {
+								return fmt.Errorf("Error getting configuration file: %w", err)
+							}
+							sql, err := sql.Open("postgres", fmt.Sprintf(
+								"user=%s password=%s host=%s port=%d dbname=%s sslmode=disable",
+								config.Databases.User,
+								config.Databases.Password,
+								config.Databases.Host,
+								config.Databases.Port,
+								config.Databases.Name,
+							))
+							if err != nil {
+								return fmt.Errorf("error parsing database configuration: %w", err)
+							}
+							defer func() {
+								if err := sql.Close(); err != nil {
+									log.Warn().Msgf("failed to close database connection: %v", err)
+								}
+							}()
+
+							// if e := sql.Ping(); e != nil {
+							// 	return fmt.Errorf("failed to ping database: %w", e)
+							// } else {
+							// 	log.Info().Msg("Database connection established")
+							// }
+							migrate, err := hack_provider.NewHackMigration(sql)
+							if err != nil {
+								return fmt.Errorf("failed to create migration: %w", err)
+							}
+							// migrate, err := NewMigration(sql)
+							// if err != nil {
+							// 	return fmt.Errorf("failed to create migration: %w", err)
+							// }
+							if err := migrate.Up(c.Context); err != nil {
+								return fmt.Errorf("failed to migrate: %w", err)
+							}
+							log.Info().Msg("Migration succeed")
 							return nil
 						},
 					},
 					{
 						Name: "down",
 						Action: func(c *cli.Context) error {
-							// TODO: Create down migration using goose (https://github.com/pressly/goose)
+							config, err := GetConfig(c.String("configuration-file"))
+							if err != nil {
+								return fmt.Errorf("Error getting configuration file: %w", err)
+							}
+							sql, err := sql.Open("postgres", fmt.Sprintf(
+								"user=%s password=%s host=%s port=%d dbname=%s sslmode=disable",
+								config.Databases.User,
+								config.Databases.Password,
+								config.Databases.Host,
+								config.Databases.Port,
+								config.Databases.Name,
+							))
+							if err != nil {
+								return fmt.Errorf("error parsing database configuration: %w", err)
+							}
+							defer func() {
+								if err := sql.Close(); err != nil {
+									log.Warn().Msgf("failed to close database connection: %v", err)
+								}
+							}()
+							migrate, err := hack_provider.NewHackMigration(sql)
+							if err != nil {
+								return fmt.Errorf("failed to create migration: %w", err)
+							}
+							if err := migrate.Down(c.Context); err != nil {
+								return fmt.Errorf("failed to migrate: %w", err)
+							}
+							log.Info().Msg("Migration succeed")
 							return nil
 						},
 					},
@@ -211,6 +240,6 @@ func App() *cli.App {
 func main() {
 	err := App().Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Msgf("Error running application: %v", err)
 	}
 }

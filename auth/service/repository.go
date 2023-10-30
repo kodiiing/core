@@ -12,21 +12,17 @@ import (
 	"time"
 
 	"github.com/allegro/bigcache/v3"
+	"github.com/jackc/pgx/v5"
 )
 
 func (d *AuthService) CreateUserRepository(ctx context.Context, userId int64, repositories []auth.Repository) error {
-	conn, err := d.db.Conn(ctx)
+	db, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get connection: %w", err)
+		return fmt.Errorf("failed to acquire connection from pool: %w", err)
 	}
-	defer func() {
-		err := conn.Close()
-		if err != nil {
-			log.Printf("failed to close connection: %v", err)
-		}
-	}()
+	defer db.Release()
 
-	tx, err := conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
