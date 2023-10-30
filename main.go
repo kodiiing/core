@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"database/sql"
+	"fmt"
 	auth_jwt "kodiiing/auth/jwt"
 	auth_middleware "kodiiing/auth/middleware"
 	"log"
