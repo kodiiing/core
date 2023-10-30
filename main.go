@@ -4,13 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
+	"github.com/allegro/bigcache/v3"
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/lib/pq"
+	"github.com/typesense/typesense-go/typesense"
+	"github.com/urfave/cli/v2"
 	auth_service "kodiiing/auth/service"
 	auth_stub "kodiiing/auth/stub"
 	codereview_service "kodiiing/codereview/service"
@@ -20,23 +19,20 @@ import (
 	hack_stub "kodiiing/hack/stub"
 	user_service "kodiiing/user/service"
 	user_stub "kodiiing/user/stub"
-
-	"github.com/allegro/bigcache/v3"
-	"github.com/go-chi/chi/v5"
-	_ "github.com/lib/pq"
-	"github.com/typesense/typesense-go/typesense"
-	"github.com/urfave/cli/v2"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func ApiServer(ctx context.Context) error {
-	env, ok := os.LookupEnv("ENVIRONMENT")
-	if !ok {
-		env = "development"
-	}
 
-	port, ok := os.LookupEnv("PORT")
-	if !ok {
-		env = "5001"
+	log.Printf("Context: %v", ctx.Value("configuration-file"))
+	config, err := GetConfig("configuration-file.yml")
+	if err != nil {
+		return fmt.Errorf("Error getting configuration file: %w", err)
 	}
 
 	// TODO: Modify this to acquire from configuration file
@@ -45,17 +41,7 @@ func ApiServer(ctx context.Context) error {
 		databaseUrl = "postgres://root@localhost:5432/kodiiing?sslmode=disable"
 	}
 
-	// TODO: Modify this to acquire from configuration file
-	searchUrl, ok := os.LookupEnv("SEARCH_URL")
-	if !ok {
-		searchUrl = "http://localhost:8108"
-	}
-
-	// TODO: Modify this to acquire from configuration file
-	searchApiKey, ok := os.LookupEnv("SEARCH_API_KEY")
-	if !ok {
-		searchApiKey = ""
-	}
+	searchUrl := fmt.Sprintf("%s:%s", config.Search.Host, config.Search.Port)
 
 	// TODO: Migrate to pgx (using pgxpool), if possible
 	db, err := sql.Open("postgres", databaseUrl)
@@ -69,15 +55,32 @@ func ApiServer(ctx context.Context) error {
 		}
 	}(db)
 
+	pgxConfig, err := pgxpool.ParseConfig(fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		config.Databases.User,
+		config.Databases.Password,
+		config.Databases.Host,
+		config.Databases.Port,
+		config.Databases.Name,
+	))
+	if err != nil {
+		return fmt.Errorf("error parsing database configuration: %w", err)
+	}
+
+	conn, err := pgxpool.NewWithConfig(ctx, pgxConfig)
+	if err != nil {
+		return fmt.Errorf("error creating database connection: %w", err)
+	}
+
 	search := typesense.NewClient(
 		typesense.WithServer(searchUrl),
-		typesense.WithAPIKey(searchApiKey),
+		typesense.WithAPIKey(config.Search.Key),
 	)
 
 	// TODO: Make default eviction time configurable from the configuration file
 	memory, err := bigcache.NewBigCache(bigcache.DefaultConfig(time.Minute * 3))
 	if err != nil {
-		return fmt.Errorf("Error creating memory cache: %w", err)
+		return fmt.Errorf("error creating memory cache: %w", err)
 	}
 	defer func(memory *bigcache.BigCache) {
 		err := memory.Close()
@@ -100,13 +103,13 @@ func ApiServer(ctx context.Context) error {
 
 	app := chi.NewRouter()
 
-	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(env, db, search)))
-	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(env, db)))
-	app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(env, db, memory)))
-	app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(env, db)))
+	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(config.Environment, db, search)))
+	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(config.Environment, db)))
+	app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(config.Environment, db, memory)))
+	app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(config.Environment, db)))
 
 	server := &http.Server{
-		Addr:         ":" + port,
+		Addr:         ":" + config.Port,
 		Handler:      app,
 		ReadTimeout:  time.Second * 10,
 		WriteTimeout: time.Second * 10,
@@ -160,9 +163,9 @@ func App() *cli.App {
 		Licensed under the Apache License, Version 2.0 (the "License");
 		you may not use this file except in compliance with the License.
 		You may obtain a copy of the License at
-	 
+
 			http://www.apache.org/licenses/LICENSE-2.0
-	 
+
 		Unless required by applicable law or agreed to in writing, software
 		distributed under the License is distributed on an "AS IS" BASIS,
 		WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.

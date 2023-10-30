@@ -3,14 +3,44 @@ package hack_provider
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"errors"
 	"fmt"
 	hack_stub "kodiiing/hack/stub"
 	"log"
 
+	"github.com/pressly/goose/v3"
 	"github.com/typesense/typesense-go/typesense"
 	"github.com/typesense/typesense-go/typesense/api"
 )
+
+//go:embed migrations/*.sql
+var embedMigrations embed.FS
+
+type HackMigration struct {
+	db *sql.DB
+}
+
+func NewHackMigration(db *sql.DB) (*HackMigration, error) {
+	if db == nil {
+		return &HackMigration{}, errors.New("db is nil")
+	}
+	goose.SetBaseFS(embedMigrations)
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		return &HackMigration{}, fmt.Errorf("failed to set dialect: %s", err.Error())
+	}
+
+	return &HackMigration{db: db}, nil
+}
+
+func (m *HackMigration) Up(ctx context.Context) (err error) {
+	return goose.UpContext(ctx, m.db, ".")
+}
+
+func (m *HackMigration) Down(ctx context.Context) (err error) {
+	return goose.DownContext(ctx, m.db, ".")
+}
 
 func MigrateHackSQL(ctx context.Context, d *sql.DB) *hack_stub.HackServiceError {
 	db, err := d.Conn(ctx)
