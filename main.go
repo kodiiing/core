@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	hack_provider "kodiiing/hack/provider"
 	auth_service "kodiiing/auth/service"
 	auth_stub "kodiiing/auth/stub"
 	codereview_service "kodiiing/codereview/service"
 	codereview_stub "kodiiing/codereview/stub"
+	hack_provider "kodiiing/hack/provider"
 	hack_service "kodiiing/hack/service"
 	hack_stub "kodiiing/hack/stub"
 	user_service "kodiiing/user/service"
