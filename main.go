@@ -4,11 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	hack_provider "kodiiing/hack/provider"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	hack_provider "kodiiing/hack/provider"
+	auth_service "kodiiing/auth/service"
+	auth_stub "kodiiing/auth/stub"
+	codereview_service "kodiiing/codereview/service"
+	codereview_stub "kodiiing/codereview/stub"
+	hack_service "kodiiing/hack/service"
+	hack_stub "kodiiing/hack/stub"
+	user_service "kodiiing/user/service"
+	user_stub "kodiiing/user/stub"
+
+
 	"github.com/allegro/bigcache/v3"
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
@@ -66,38 +80,38 @@ func ApiServer(ctx context.Context) error {
 		return fmt.Errorf("failed to migrate: %v", errCreateCollection)
 	}
 
-	// app := chi.NewRouter()
+	app := chi.NewRouter()
 
-	// app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(config.Environment, pgxPool, search)))
-	// app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(config.Environment, pgxPool)))
-	// app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(config.Environment, pgxPool, memory)))
-	// app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(config.Environment, pgxPool)))
+	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(config.Environment, pgxPool, search)))
+	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(config.Environment, pgxPool)))
+	app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(config.Environment, pgxPool, memory)))
+	app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(config.Environment, pgxPool)))
 
-	// server := &http.Server{
-	// 	Addr:         ":" + config.Port,
-	// 	Handler:      app,
-	// 	ReadTimeout:  time.Second * 10,
-	// 	WriteTimeout: time.Second * 10,
-	// 	IdleTimeout:  time.Second * 15,
-	// }
+	server := &http.Server{
+		Addr:         ":" + config.Port,
+		Handler:      app,
+		ReadTimeout:  time.Second * 10,
+		WriteTimeout: time.Second * 10,
+		IdleTimeout:  time.Second * 15,
+	}
 
-	// sig := make(chan os.Signal, 1)
-	// signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGINT)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGINT)
 
-	// go func() {
-	// 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-	// 		log.Printf("error during listening server: %v", err)
-	// 	}
-	// }()
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("error during listening server: %v", err)
+		}
+	}()
 
-	// <-sig
+	<-sig
 
-	// shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Second*10)
-	// defer shutdownCancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer shutdownCancel()
 
-	// if err := server.Shutdown(shutdownCtx); err != nil {
-	// 	log.Printf("error during shutting down server: %v", err)
-	// }
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("error during shutting down server: %v", err)
+	}
 
 	return nil
 }
