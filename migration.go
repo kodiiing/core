@@ -9,7 +9,7 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-//go:embed hack/migrations/*.sql
+//go:embed migrations/*.sql
 var embedMigrations embed.FS
 
 type Migration struct {
@@ -31,11 +31,10 @@ func NewMigration(db *sql.DB) (*Migration, error) {
 }
 
 func (m *Migration) Up(ctx context.Context) (err error) {
-	// return goose.UpContext(ctx, m.db, "migrations")
-	return goose.UpContext(ctx, m.db, "hack/migrations")
+	return goose.UpContext(ctx, m.db, "migrations")
 }
 
 func (m *Migration) Down(ctx context.Context) error {
 	// return goose.DownContext(ctx, m.db, "migrations")
-	return goose.DownContext(ctx, m.db, "hack/migrations")
+	return goose.DownContext(ctx, m.db, "migrations")
 }

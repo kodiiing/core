@@ -176,20 +176,10 @@ func App() *cli.App {
 									log.Warn().Msgf("failed to close database connection: %v", err)
 								}
 							}()
-
-							// if e := sql.Ping(); e != nil {
-							// 	return fmt.Errorf("failed to ping database: %w", e)
-							// } else {
-							// 	log.Info().Msg("Database connection established")
-							// }
-							migrate, err := hack_provider.NewHackMigration(sql)
+							migrate, err := NewMigration(sql)
 							if err != nil {
 								return fmt.Errorf("failed to create migration: %w", err)
 							}
-							// migrate, err := NewMigration(sql)
-							// if err != nil {
-							// 	return fmt.Errorf("failed to create migration: %w", err)
-							// }
 							if err := migrate.Up(c.Context); err != nil {
 								return fmt.Errorf("failed to migrate: %w", err)
 							}
@@ -220,11 +210,11 @@ func App() *cli.App {
 									log.Warn().Msgf("failed to close database connection: %v", err)
 								}
 							}()
-							migrate, err := hack_provider.NewHackMigration(sql)
+							migrate, err := NewMigration(sql)
 							if err != nil {
 								return fmt.Errorf("failed to create migration: %w", err)
 							}
-							if err := migrate.Down(c.Context); err != nil {
+							if err := migrate.Up(c.Context); err != nil {
 								return fmt.Errorf("failed to migrate: %w", err)
 							}
 							log.Info().Msg("Migration succeed")
