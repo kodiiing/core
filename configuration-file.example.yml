@@ -9,7 +9,7 @@ database:
 
 port: 8080
 
-Search:
+search:
   host: localhost
   port: 8108
   key:
