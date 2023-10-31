@@ -6,17 +6,19 @@ import (
 
 	hack_stub "kodiiing/hack/stub"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/typesense/typesense-go/typesense"
 )
 
 type HackService struct {
 	environment string
 	db          *sql.DB
+	pool 		*pgxpool.Pool
 	search      *typesense.Client
 }
 
-func NewHackService(env string, db *sql.DB, search *typesense.Client) *HackService {
-	return &HackService{environment: env, db: db, search: search}
+func NewHackService(env string, pool *pgxpool.Pool, search *typesense.Client) *HackService {
+	return &HackService{environment: env, pool: pool, search: search}
 }
 
 // Starts a new hack post.

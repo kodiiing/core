@@ -1,0 +1,16 @@
+environment: development
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  database: kodiing
+
+port: 8080
+
+search:
+  host: localhost
+  port: 8108
+  key:
+

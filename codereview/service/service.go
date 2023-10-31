@@ -2,20 +2,21 @@ package codereview_service
 
 import (
 	"context"
-	"database/sql"
 
 	codereview_stub "kodiiing/codereview/stub"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CodeReviewService struct {
-	db          *sql.DB
+	pool        *pgxpool.Pool
 	environment string
 }
 
-func NewCodeReviewService(env string, db *sql.DB) *CodeReviewService {
+func NewCodeReviewService(env string, pool *pgxpool.Pool) *CodeReviewService {
 	return &CodeReviewService{
+		pool:        pool,
 		environment: env,
-		db:          db,
 	}
 }
 
