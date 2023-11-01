@@ -2,18 +2,19 @@ package user_service
 
 import (
 	"context"
-	"database/sql"
 
 	user_stub "kodiiing/user/stub"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserService struct {
 	environment string
-	db          *sql.DB
+	pool        *pgxpool.Pool
 }
 
-func NewUserService(env string, db *sql.DB) *UserService {
-	return &UserService{environment: env, db: db}
+func NewUserService(env string, pool *pgxpool.Pool) *UserService {
+	return &UserService{environment: env, pool: pool}
 }
 
 func (d *UserService) Onboarding(ctx context.Context, req *user_stub.OnboardingRequest) (*user_stub.EmptyResponse, *user_stub.UserServiceError) {

@@ -2,56 +2,52 @@ package hack_provider
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
-	"github.com/lib/pq"
 	hackstub "kodiiing/hack/stub"
 	"log"
 	"math"
 	"strconv"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lib/pq"
 )
 
 type HackYugabyte struct {
-	db *sql.DB
+	pool *pgxpool.Pool
 }
 
-func NewHackYugabyte(db *sql.DB) *HackYugabyte {
-	return &HackYugabyte{db: db}
+func NewHackYugabyte(pool *pgxpool.Pool) *HackYugabyte {
+	return &HackYugabyte{pool: pool}
 }
 
 // CreateRepo Starts a new hack post.
 func (d *HackYugabyte) CreateRepo(ctx context.Context, req *hackstub.CreateRequest) (*hackstub.CreateResponse, error) {
-	db, err := d.db.Conn(ctx)
+	db, err := d.pool.Acquire(ctx)
 	if err != nil {
 		return &hackstub.CreateResponse{}, fmt.Errorf("message err failed to connect to database:  %s", err.Error())
 	}
-	defer func() {
-		err = db.Close()
-		if err != nil && !errors.Is(err, sql.ErrConnDone) {
-			log.Printf("failed to close database connection: %v", err)
-		}
-	}()
+	defer db.Release()
 
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return &hackstub.CreateResponse{}, fmt.Errorf("message err failed to start transaction: %s", err.Error())
 	}
 
 	defer func() {
-		if errRollback := tx.Rollback(); errRollback != nil {
+		if errRollback := tx.Rollback(ctx); errRollback != nil {
 			log.Printf("message err rollback create new hack post: %v", err.Error())
 		}
 	}()
 
 	var lastInsertId string
 	query := "insert into hacks (title, content, tags, access_token) values($1, $2, $3, $4) RETURNING id"
-	errQueryExceHack := tx.QueryRowContext(ctx, query, req.Title, req.Text, req.Tags, req.Auth.AccessToken).Scan(&lastInsertId)
+	errQueryExceHack := tx.QueryRow(ctx, query, req.Title, req.Text, req.Tags, req.Auth.AccessToken).Scan(&lastInsertId)
 	if errQueryExceHack != nil {
 		return &hackstub.CreateResponse{}, fmt.Errorf("message err query failed to create a new hack: %v", errQueryExceHack)
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return &hackstub.CreateResponse{}, fmt.Errorf("message err committing transaction: %w", err)
 	}
 	return &hackstub.CreateResponse{Id: lastInsertId}, nil
@@ -59,23 +55,18 @@ func (d *HackYugabyte) CreateRepo(ctx context.Context, req *hackstub.CreateReque
 
 // UpvoteRepo Upvote a hack post.
 func (d *HackYugabyte) UpvoteRepo(ctx context.Context, req *hackstub.UpvoteRequest) (*hackstub.UpvoteResponse, error) {
-	db, err := d.db.Conn(ctx)
+	db, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return &hackstub.UpvoteResponse{}, fmt.Errorf("message err failed to connect to database:  %w", err)
+		return &hackstub.UpvoteResponse{}, fmt.Errorf("message err failed to connect to database:  %s", err.Error())
 	}
-	defer func() {
-		err := db.Close()
-		if err != nil && !errors.Is(err, sql.ErrConnDone) {
-			log.Printf("failed to close database connection: %v", err)
-		}
-	}()
+	defer db.Release()
 
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		return &hackstub.UpvoteResponse{}, fmt.Errorf("message err failed to start transaction: %w", err)
+		return &hackstub.UpvoteResponse{}, fmt.Errorf("message err failed to start transaction: %s", err.Error())
 	}
 	defer func() {
-		if errRollback := tx.Rollback(); errRollback != nil {
+		if errRollback := tx.Rollback(ctx); errRollback != nil {
 			log.Printf("message err rollback create new hack post: %v", err.Error())
 		}
 	}()
@@ -89,17 +80,17 @@ func (d *HackYugabyte) UpvoteRepo(ctx context.Context, req *hackstub.UpvoteReque
 
 	query := "select upvotes from hacks where id = $1"
 	var upvote int64
-	err = tx.QueryRowContext(ctx, query, req.Id).Scan(&upvote)
+	err = tx.QueryRow(ctx, query, req.Id).Scan(&upvote)
 	if err != nil {
 		return &hackstub.UpvoteResponse{}, fmt.Errorf("message err failed to scan data not found: %v", err)
 	}
 	query = "UPDATE hacks SET upvotes = $1 where id = $2"
-	_, err = tx.ExecContext(ctx, query, upvote+1, req.Id)
+	_, err = tx.Exec(ctx, query, upvote+1, req.Id)
 	if err != nil {
 		return &hackstub.UpvoteResponse{}, fmt.Errorf("message err failed to execute update query: %v", err)
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return &hackstub.UpvoteResponse{}, fmt.Errorf("message err committing transaction: %w", err)
 	}
 
@@ -108,23 +99,18 @@ func (d *HackYugabyte) UpvoteRepo(ctx context.Context, req *hackstub.UpvoteReque
 
 // CommentRepo Comment to a hack post, or reply to an existing comment.
 func (d *HackYugabyte) CommentRepo(ctx context.Context, req *hackstub.CommentRequest, authorId int64) (*hackstub.CommentResponse, error) {
-	db, err := d.db.Conn(ctx)
+	db, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return &hackstub.CommentResponse{}, fmt.Errorf("message err failed to connect to database:  %v", err.Error())
+		return &hackstub.CommentResponse{}, fmt.Errorf("message err failed to connect to database:  %s", err.Error())
 	}
-	defer func() {
-		err = db.Close()
-		if err != nil && !errors.Is(err, sql.ErrConnDone) {
-			log.Printf("failed to close database connection: %v", err.Error())
-		}
-	}()
+	defer db.Release()
 
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		return &hackstub.CommentResponse{}, fmt.Errorf("message err failed to start transaction: %w", err)
+		return &hackstub.CommentResponse{}, fmt.Errorf("message err failed to start transaction: %s", err.Error())
 	}
 	defer func() {
-		if errRollback := tx.Rollback(); errRollback != nil {
+		if errRollback := tx.Rollback(ctx); errRollback != nil {
 			log.Printf("message err rollback create new hack post: %v", err.Error())
 		}
 	}()
@@ -132,7 +118,7 @@ func (d *HackYugabyte) CommentRepo(ctx context.Context, req *hackstub.CommentReq
 	var commentId string
 	var lastInsertId string
 	query := "insert into comments (content, author_id) values ($1, $2) RETURNING id"
-	errQueryComment := tx.QueryRowContext(ctx, query, req.Text, authorId).Scan(&lastInsertId)
+	errQueryComment := tx.QueryRow(ctx, query, req.Text, authorId).Scan(&lastInsertId)
 	if errQueryComment != nil {
 		return &hackstub.CommentResponse{}, fmt.Errorf("message err failed to execute insert comment query: %w", err)
 	}
@@ -144,12 +130,12 @@ func (d *HackYugabyte) CommentRepo(ctx context.Context, req *hackstub.CommentReq
 	}
 
 	query = "insert into hack_comments (hack_id, comment_id) values ($1, $2)"
-	errQueryHackComment := tx.QueryRowContext(ctx, query, req.HackId, lastInsertId)
+	errQueryHackComment := tx.QueryRow(ctx, query, req.HackId, lastInsertId)
 	if errQueryHackComment != nil {
 		return &hackstub.CommentResponse{}, fmt.Errorf("message err failed to execute insert hack_comments query: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return &hackstub.CommentResponse{}, fmt.Errorf("message err committing transaction: %w", err)
 	}
 	return &hackstub.CommentResponse{HackId: req.HackId, CommentId: commentId}, nil
@@ -157,23 +143,18 @@ func (d *HackYugabyte) CommentRepo(ctx context.Context, req *hackstub.CommentReq
 
 // See all hack posts, or maybe with a filter.
 func (d *HackYugabyte) ListRepo(ctx context.Context, req *hackstub.ListRequest) (*hackstub.ListResponse, error) {
-	db, err := d.db.Conn(ctx)
+	db, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return &hackstub.ListResponse{}, fmt.Errorf("message err failed to connect to database:  %w", err)
+		return &hackstub.ListResponse{}, fmt.Errorf("message err failed to connect to database:  %s", err.Error())
 	}
-	defer func() {
-		err := db.Close()
-		if err != nil && !errors.Is(err, sql.ErrConnDone) {
-			log.Printf("failed to close database connection: %V", err)
-		}
-	}()
+	defer db.Release()
 
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		return &hackstub.ListResponse{}, fmt.Errorf("message err failed to start transaction: %w", err)
+		return &hackstub.ListResponse{}, fmt.Errorf("message err failed to start transaction: %s", err.Error())
 	}
 	defer func() {
-		if errRollback := tx.Rollback(); errRollback != nil {
+		if errRollback := tx.Rollback(ctx); errRollback != nil {
 			log.Printf("message err rollback list hack posts: %v", err.Error())
 		}
 	}()
@@ -189,15 +170,11 @@ func (d *HackYugabyte) ListRepo(ctx context.Context, req *hackstub.ListRequest) 
 
 	//get hacks
 	query := "select count(*) over() as total_result, id as hack_id, id, title, content, upvotes, author_id from hacks ORDER BY $1 ASC LIMIT 10 OFFSET 10 * ($2 -1)"
-	rows, err := tx.QueryContext(ctx, query, req.SortBy, page)
+	rows, err := tx.Query(ctx, query, req.SortBy, page)
 	if err != nil {
 		return &hackstub.ListResponse{}, fmt.Errorf("message err failed to query: %v", err)
 	}
-	defer func() {
-		if errClose := rows.Close(); errClose != nil {
-			log.Printf("Error closing rows: %v", errClose)
-		}
-	}()
+	defer rows.Close()
 
 	var hacks []hackstub.Hack
 	var totalResult uint64
@@ -226,7 +203,7 @@ func (d *HackYugabyte) ListRepo(ctx context.Context, req *hackstub.ListRequest) 
 
 	//get author
 	query = "select id,name, profile_url, picture_url from authors where id = any($1)"
-	rowAuthor, err := tx.QueryContext(ctx, query, pq.Array(authorIds))
+	rowAuthor, err := tx.Query(ctx, query, pq.Array(authorIds))
 	if err != nil {
 		return &hackstub.ListResponse{}, fmt.Errorf("message err failed to scan author row: %v", err)
 	}
@@ -248,7 +225,7 @@ func (d *HackYugabyte) ListRepo(ctx context.Context, req *hackstub.ListRequest) 
 				left join comments c on hc.comment_id = c.id
 				left join authors a on c.author_id = a.id
 				where hacks.id = any($1) order by hacks.id;`
-	rowComments, err := tx.QueryContext(ctx, query, pq.Array(hackIds))
+	rowComments, err := tx.Query(ctx, query, pq.Array(hackIds))
 	if err != nil {
 		return &hackstub.ListResponse{}, fmt.Errorf("message err failed to query: %v", err)
 	}
@@ -271,7 +248,7 @@ func (d *HackYugabyte) ListRepo(ctx context.Context, req *hackstub.ListRequest) 
 	//total page
 	totalPage := math.Round(math.Ceil(float64(totalResult) / 10))
 
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return &hackstub.ListResponse{}, fmt.Errorf("message err committing transaction: %w", err)
 	}
 	return &hackstub.ListResponse{Hacks: hacks, TotalResults: totalResult, CurrentPage: req.Page, TotalPage: uint32(totalPage)}, nil
