@@ -27,40 +27,32 @@ func (d *AuthService) CreateUserRepository(ctx context.Context, userId int64, re
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	query, err := tx.PrepareContext(
-		ctx,
-		`INSERT INTO
-			user_repositories
-			(
-				user_id,
-				repository_id,
-				provider,
-				name,
-				url,
-				description,
-				fork,
-				fork_count,
-				star_count,
-				owner_username,
-				created_at,
-				last_activity_at,
-				updated_at,
-				updated_by
-			)
-		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+	var sql = `
+	INSERT INTO
+	user_repositories
+	(
+		user_id,
+		repository_id,
+		provider,
+		name,
+		url,
+		description,
+		fork,
+		fork_count,
+		star_count,
+		owner_username,
+		created_at,
+		last_activity_at,
+		updated_at,
+		updated_by
 	)
-	if err != nil {
-		if e := tx.Rollback(); e != nil {
-			return fmt.Errorf("failed to rollback transaction: %w", e)
-		}
-
-		return fmt.Errorf("failed to prepare query: %w", err)
-	}
+	VALUES
+	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
 
 	for _, repository := range repositories {
-		_, err := tx.StmtContext(ctx, query).ExecContext(
+		_, err := tx.Exec(
 			ctx,
+			sql,
 			userId,
 			repository.ID,
 			repository.Provider.ToUint8(),
@@ -77,7 +69,7 @@ func (d *AuthService) CreateUserRepository(ctx context.Context, userId int64, re
 			"system",
 		)
 		if err != nil {
-			if e := tx.Rollback(); e != nil {
+			if e := tx.Rollback(ctx); e != nil {
 				return fmt.Errorf("failed to rollback transaction: %w", e)
 			}
 
@@ -85,9 +77,9 @@ func (d *AuthService) CreateUserRepository(ctx context.Context, userId int64, re
 		}
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(ctx)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return fmt.Errorf("failed to rollback transaction: %w", e)
 		}
 
@@ -113,18 +105,13 @@ func (d *AuthService) GetUserRepositoryByUserId(ctx context.Context, userId int6
 		return repositories, nil
 	}
 
-	conn, err := d.db.Conn(ctx)
+	conn, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return []auth.Repository{}, fmt.Errorf("failed to get connection: %w", err)
+		return []auth.Repository{}, fmt.Errorf("failed to acquire connection from pool: %w", err)
 	}
-	defer func() {
-		err := conn.Close()
-		if err != nil {
-			log.Printf("failed to close connection: %v", err)
-		}
-	}()
+	defer conn.Release()
 
-	rows, err := conn.QueryContext(
+	rows, err := conn.Query(
 		ctx,
 		`SELECT
 			repository_id,
@@ -147,12 +134,7 @@ func (d *AuthService) GetUserRepositoryByUserId(ctx context.Context, userId int6
 	if err != nil {
 		return []auth.Repository{}, fmt.Errorf("failed to query user repositories: %w", err)
 	}
-	defer func() {
-		err := rows.Close()
-		if err != nil {
-			log.Printf("failed to close rows: %v", err)
-		}
-	}()
+	defer rows.Close()
 
 	var repositories []auth.Repository
 	for rows.Next() {

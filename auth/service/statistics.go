@@ -2,31 +2,18 @@ package auth_service
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"kodiiing/auth"
-	"log"
 	"time"
 )
 
 func (d *AuthService) CreateUserStatistics(ctx context.Context, userId int64, user auth.User) error {
-	conn, err := d.db.Conn(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get connection: %w", err)
-	}
-	defer func() {
-		err := conn.Close()
-		if err != nil {
-			log.Printf("failed to close connection: %v", err)
-		}
-	}()
-
-	tx, err := conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSnapshot})
+	tx, err := d.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	_, err = tx.ExecContext(
+	_, err = tx.Exec(
 		ctx,
 		`INSERT INTO
 			user_statistics
@@ -54,16 +41,16 @@ func (d *AuthService) CreateUserStatistics(ctx context.Context, userId int64, us
 		"system",
 	)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return fmt.Errorf("failed to rollback transaction: %w", e)
 		}
 
 		return fmt.Errorf("failed to insert user statistics: %w", err)
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(ctx)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return fmt.Errorf("failed to rollback transaction: %w", e)
 		}
 
