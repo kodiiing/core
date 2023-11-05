@@ -35,6 +35,5 @@ func (m *Migration) Up(ctx context.Context) (err error) {
 }
 
 func (m *Migration) Down(ctx context.Context) error {
-	// return goose.DownContext(ctx, m.db, "migrations")
 	return goose.DownContext(ctx, m.db, "migrations")
 }
