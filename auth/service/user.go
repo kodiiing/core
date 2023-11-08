@@ -17,12 +17,14 @@ import (
 )
 
 func (d *AuthService) CreateUser(ctx context.Context, user *auth.User) (id int64, err error) {
-	tx, err := d.pool.Begin(ctx)
+	tx, err := d.pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:   pgx.ReadCommitted,
+		AccessMode: pgx.ReadWrite,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("starting transaction: %w", err)
 	}
 
-	var insertId int64
 	err = tx.QueryRow(
 		ctx,
 		`INSERT INTO users
@@ -40,8 +42,7 @@ func (d *AuthService) CreateUser(ctx context.Context, user *auth.User) (id int64
 			)
 			VALUES
 			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-			RETURNING
-			`,
+			RETURNING id`,
 		user.Provider.ToUint8(),
 		user.ID,
 		user.Name,
@@ -52,7 +53,7 @@ func (d *AuthService) CreateUser(ctx context.Context, user *auth.User) (id int64
 		time.Now(),
 		time.Now(),
 		"system",
-	).Scan(&insertId)
+	).Scan(&id)
 	if err != nil {
 		if e := tx.Rollback(ctx); e != nil {
 			return 0, fmt.Errorf("error rolling back transaction: %w", e)
@@ -70,7 +71,7 @@ func (d *AuthService) CreateUser(ctx context.Context, user *auth.User) (id int64
 		return 0, fmt.Errorf("error committing transaction: %w", err)
 	}
 
-	return insertId, nil
+	return
 }
 
 func (d *AuthService) GetUserById(ctx context.Context, id int64) (auth.User, error) {

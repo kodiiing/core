@@ -49,10 +49,19 @@ func (d *AuthService) CreateUserRepository(ctx context.Context, userId int64, re
 	VALUES
 	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
 
+	stmt, err := tx.Prepare(ctx, "CreateUserRepository", sql)
+	if err != nil {
+		if e := tx.Rollback(ctx); e != nil {
+			return fmt.Errorf("failed to rollback transaction: %w", e)
+		}
+
+		return fmt.Errorf("failed to prepare statement: %w", err)
+	}
+
 	for _, repository := range repositories {
 		_, err := tx.Exec(
 			ctx,
-			sql,
+			stmt.Name,
 			userId,
 			repository.ID,
 			repository.Provider.ToUint8(),
