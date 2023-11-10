@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS user_repositories (
     fork_count BIGINT NOT NULL DEFAULT 0,
     star_count BIGINT NOT NULL DEFAULT 0,
     owner_username VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
     last_activity_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_by VARCHAR(63) NOT NULL DEFAULT 'system',
