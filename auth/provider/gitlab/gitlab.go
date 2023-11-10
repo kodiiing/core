@@ -14,7 +14,7 @@ type gitlab struct {
 	ClientSecret string
 }
 
-func New(id, secret string) *gitlab {
+func New(id, secret string) provider.Authentication {
 	return &gitlab{
 		ClientId:     id,
 		ClientSecret: secret,
