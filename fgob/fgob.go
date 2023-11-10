@@ -1,4 +1,4 @@
-// fgob implement a simple abstraction on top of gob encoding
+// Package fgob implement a simple abstraction on top of gob encoding
 // provided by https://pkg.go.dev/encoding/gob
 package fgob
 
