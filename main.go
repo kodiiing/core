@@ -10,16 +10,15 @@ import (
 	"syscall"
 	"time"
 
-	auth_service "kodiiing/auth/service"
-	auth_stub "kodiiing/auth/stub"
-	codereview_service "kodiiing/codereview/service"
-	codereview_stub "kodiiing/codereview/stub"
-	hack_provider "kodiiing/hack/provider"
-	hack_service "kodiiing/hack/service"
-	hack_stub "kodiiing/hack/stub"
-	user_service "kodiiing/user/service"
-	user_stub "kodiiing/user/stub"
-
+	authservice "kodiiing/auth/service"
+	authstub "kodiiing/auth/stub"
+	codereviewservice "kodiiing/codereview/service"
+	codereviewstub "kodiiing/codereview/stub"
+	hackprovider "kodiiing/hack/provider"
+	hackservice "kodiiing/hack/service"
+	hackstub "kodiiing/hack/stub"
+	userservice "kodiiing/user/service"
+	userstub "kodiiing/user/stub"
 
 	"github.com/allegro/bigcache/v3"
 	"github.com/go-chi/chi/v5"
@@ -31,13 +30,10 @@ import (
 )
 
 func ApiServer(ctx context.Context) error {
-
 	config, err := GetConfig("configuration-file.yml")
 	if err != nil {
 		return fmt.Errorf("Error getting configuration file: %w", err)
 	}
-
-	searchUrl := fmt.Sprintf("%s:%s", config.Search.Host, config.Search.Port)
 
 	pgxConfig, err := pgxpool.ParseConfig(fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
@@ -57,35 +53,36 @@ func ApiServer(ctx context.Context) error {
 	}
 	defer pgxPool.Close()
 
+	searchUrl := fmt.Sprintf("%s:%s", config.Search.Host, config.Search.Port)
 	search := typesense.NewClient(
 		typesense.WithServer(searchUrl),
 		typesense.WithAPIKey(config.Search.Key),
 	)
 
 	// TODO: Make default eviction time configurable from the configuration file
-	memory, err := bigcache.NewBigCache(bigcache.DefaultConfig(time.Minute * 3))
+	memory, err := bigcache.New(context.Background(), bigcache.DefaultConfig(time.Minute*3))
 	if err != nil {
 		return fmt.Errorf("error creating memory cache: %w", err)
 	}
 	defer func(memory *bigcache.BigCache) {
 		err := memory.Close()
 		if err != nil {
-			log.Printf("Error closing memory cache: %v", err)
+			log.Warn().Err(err).Msg("Closing memory cache")
 		}
 	}(memory)
 
 	//Collection schema (Typesense)
-	errCreateCollection := hack_provider.CreateCollections(ctx, search)
+	errCreateCollection := hackprovider.CreateCollections(ctx, search)
 	if errCreateCollection != nil {
 		return fmt.Errorf("failed to migrate: %v", errCreateCollection)
 	}
 
 	app := chi.NewRouter()
 
-	app.Mount("/Hack", hack_stub.NewHackServiceServer(hack_service.NewHackService(config.Environment, pgxPool, search)))
-	app.Mount("/User", user_stub.NewUserServiceServer(user_service.NewUserService(config.Environment, pgxPool)))
-	app.Mount("/Auth", auth_stub.NewAuthenticationServiceServer(auth_service.NewAuthService(config.Environment, pgxPool, memory)))
-	app.Mount("/CodeReview", codereview_stub.NewCodeReviewServiceServer(codereview_service.NewCodeReviewService(config.Environment, pgxPool)))
+	app.Mount("/Hack", hackstub.NewHackServiceServer(hackservice.NewHackService(config.Environment, pgxPool, search)))
+	app.Mount("/User", userstub.NewUserServiceServer(userservice.NewUserService(config.Environment, pgxPool)))
+	app.Mount("/Auth", authstub.NewAuthenticationServiceServer(authservice.NewAuthService(config.Environment, pgxPool, memory)))
+	app.Mount("/CodeReview", codereviewstub.NewCodeReviewServiceServer(codereviewservice.NewCodeReviewService(config.Environment, pgxPool)))
 
 	server := &http.Server{
 		Addr:         ":" + config.Port,
@@ -174,7 +171,7 @@ func App() *cli.App {
 							if err != nil {
 								return fmt.Errorf("Error getting configuration file: %w", err)
 							}
-							sql, err := sql.Open("postgres", fmt.Sprintf(
+							db, err := sql.Open("postgres", fmt.Sprintf(
 								"user=%s password=%s host=%s port=%d dbname=%s sslmode=disable",
 								config.Databases.User,
 								config.Databases.Password,
@@ -186,11 +183,11 @@ func App() *cli.App {
 								return fmt.Errorf("error parsing database configuration: %w", err)
 							}
 							defer func() {
-								if err := sql.Close(); err != nil {
+								if err := db.Close(); err != nil {
 									log.Warn().Msgf("failed to close database connection: %v", err)
 								}
 							}()
-							migrate, err := NewMigration(sql)
+							migrate, err := NewMigration(db)
 							if err != nil {
 								return fmt.Errorf("failed to create migration: %w", err)
 							}
@@ -208,7 +205,7 @@ func App() *cli.App {
 							if err != nil {
 								return fmt.Errorf("Error getting configuration file: %w", err)
 							}
-							sql, err := sql.Open("postgres", fmt.Sprintf(
+							db, err := sql.Open("postgres", fmt.Sprintf(
 								"user=%s password=%s host=%s port=%d dbname=%s sslmode=disable",
 								config.Databases.User,
 								config.Databases.Password,
@@ -220,11 +217,11 @@ func App() *cli.App {
 								return fmt.Errorf("error parsing database configuration: %w", err)
 							}
 							defer func() {
-								if err := sql.Close(); err != nil {
+								if err := db.Close(); err != nil {
 									log.Warn().Msgf("failed to close database connection: %v", err)
 								}
 							}()
-							migrate, err := NewMigration(sql)
+							migrate, err := NewMigration(db)
 							if err != nil {
 								return fmt.Errorf("failed to create migration: %w", err)
 							}
@@ -244,6 +241,6 @@ func App() *cli.App {
 func main() {
 	err := App().Run(os.Args)
 	if err != nil {
-		log.Fatal().Msgf("Error running application: %v", err)
+		log.Fatal().Err(err).Msg("Running application")
 	}
 }
