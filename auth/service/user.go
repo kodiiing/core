@@ -13,26 +13,19 @@ import (
 	"time"
 
 	"github.com/allegro/bigcache/v3"
+	"github.com/jackc/pgx/v5"
 )
 
 func (d *AuthService) CreateUser(ctx context.Context, user *auth.User) (id int64, err error) {
-	conn, err := d.db.Conn(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("acquiring connection pool: %w", err)
-	}
-	defer func() {
-		err := conn.Close()
-		if err != nil {
-			log.Printf("error closing connection: %v", err)
-		}
-	}()
-
-	tx, err := conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSnapshot})
+	tx, err := d.pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:   pgx.ReadCommitted,
+		AccessMode: pgx.ReadWrite,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("starting transaction: %w", err)
 	}
 
-	result, err := tx.ExecContext(
+	err = tx.QueryRow(
 		ctx,
 		`INSERT INTO users
 			(
@@ -48,7 +41,8 @@ func (d *AuthService) CreateUser(ctx context.Context, user *auth.User) (id int64
 				updated_by
 			)
 			VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			RETURNING id`,
 		user.Provider.ToUint8(),
 		user.ID,
 		user.Name,
@@ -59,34 +53,25 @@ func (d *AuthService) CreateUser(ctx context.Context, user *auth.User) (id int64
 		time.Now(),
 		time.Now(),
 		"system",
-	)
+	).Scan(&id)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return 0, fmt.Errorf("error rolling back transaction: %w", e)
 		}
 
 		return 0, fmt.Errorf("error inserting user: %w", err)
 	}
 
-	insertId, err := result.LastInsertId()
+	err = tx.Commit(ctx)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
-			return 0, fmt.Errorf("error rolling back transaction: %w", e)
-		}
-
-		return 0, fmt.Errorf("error getting last insert id: %w", err)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return 0, fmt.Errorf("error rolling back transaction: %w", e)
 		}
 
 		return 0, fmt.Errorf("error committing transaction: %w", err)
 	}
 
-	return insertId, nil
+	return
 }
 
 func (d *AuthService) GetUserById(ctx context.Context, id int64) (auth.User, error) {
@@ -106,18 +91,7 @@ func (d *AuthService) GetUserById(ctx context.Context, id int64) (auth.User, err
 		return user, nil
 	}
 
-	conn, err := d.db.Conn(ctx)
-	if err != nil {
-		return auth.User{}, fmt.Errorf("acquiring connection pool: %w", err)
-	}
-	defer func() {
-		err := conn.Close()
-		if err != nil && !errors.Is(err, sql.ErrConnDone) {
-			log.Printf("error closing connection: %v", err)
-		}
-	}()
-
-	tx, err := conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted, ReadOnly: true})
+	tx, err := d.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return auth.User{}, fmt.Errorf("starting transaction: %w", err)
 	}
@@ -125,7 +99,7 @@ func (d *AuthService) GetUserById(ctx context.Context, id int64) (auth.User, err
 	var user auth.User
 	var nullAvatarUrl sql.NullString
 	var nullLocation sql.NullString
-	err = tx.QueryRowContext(
+	err = tx.QueryRow(
 		ctx,
 		`SELECT
 			users.provider,
@@ -166,7 +140,7 @@ func (d *AuthService) GetUserById(ctx context.Context, id int64) (auth.User, err
 		&user.Following,
 	)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return auth.User{}, fmt.Errorf("error rolling back transaction: %w", e)
 		}
 
@@ -177,18 +151,13 @@ func (d *AuthService) GetUserById(ctx context.Context, id int64) (auth.User, err
 		return auth.User{}, fmt.Errorf("error getting user: %w", err)
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(ctx)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return auth.User{}, fmt.Errorf("error rolling back transaction: %w", e)
 		}
 
 		return auth.User{}, fmt.Errorf("error committing transaction: %w", err)
-	}
-
-	err = conn.Close()
-	if err != nil {
-		log.Printf("error closing connection: %v", err)
 	}
 
 	if nullAvatarUrl.Valid {
@@ -241,18 +210,7 @@ func (d *AuthService) GetUserByUsername(ctx context.Context, username string) (a
 		return user, nil
 	}
 
-	conn, err := d.db.Conn(ctx)
-	if err != nil {
-		return auth.User{}, fmt.Errorf("acquiring connection pool: %w", err)
-	}
-	defer func() {
-		err := conn.Close()
-		if err != nil && !errors.Is(err, sql.ErrConnDone) {
-			log.Printf("error closing connection: %v", err)
-		}
-	}()
-
-	tx, err := conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted, ReadOnly: true})
+	tx, err := d.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return auth.User{}, fmt.Errorf("starting transaction: %w", err)
 	}
@@ -260,7 +218,7 @@ func (d *AuthService) GetUserByUsername(ctx context.Context, username string) (a
 	var user auth.User
 	var nullAvatarUrl sql.NullString
 	var nullLocation sql.NullString
-	err = tx.QueryRowContext(
+	err = tx.QueryRow(
 		ctx,
 		`SELECT
 			users.provider,
@@ -301,7 +259,7 @@ func (d *AuthService) GetUserByUsername(ctx context.Context, username string) (a
 		&user.Following,
 	)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return auth.User{}, fmt.Errorf("error rolling back transaction: %w", e)
 		}
 
@@ -312,18 +270,13 @@ func (d *AuthService) GetUserByUsername(ctx context.Context, username string) (a
 		return auth.User{}, fmt.Errorf("error getting user: %w", err)
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(ctx)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return auth.User{}, fmt.Errorf("error rolling back transaction: %w", e)
 		}
 
 		return auth.User{}, fmt.Errorf("error committing transaction: %w", err)
-	}
-
-	err = conn.Close()
-	if err != nil {
-		log.Printf("error closing connection: %v", err)
 	}
 
 	if nullAvatarUrl.Valid {
@@ -376,18 +329,7 @@ func (d *AuthService) GetUserByEmail(ctx context.Context, email string) (auth.Us
 		return user, nil
 	}
 
-	conn, err := d.db.Conn(ctx)
-	if err != nil {
-		return auth.User{}, fmt.Errorf("acquiring connection pool: %w", err)
-	}
-	defer func() {
-		err := conn.Close()
-		if err != nil && !errors.Is(err, sql.ErrConnDone) {
-			log.Printf("error closing connection: %v", err)
-		}
-	}()
-
-	tx, err := conn.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted, ReadOnly: true})
+	tx, err := d.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return auth.User{}, fmt.Errorf("starting transaction: %w", err)
 	}
@@ -395,7 +337,7 @@ func (d *AuthService) GetUserByEmail(ctx context.Context, email string) (auth.Us
 	var user auth.User
 	var nullAvatarUrl sql.NullString
 	var nullLocation sql.NullString
-	err = tx.QueryRowContext(
+	err = tx.QueryRow(
 		ctx,
 		`SELECT
 			users.provider,
@@ -436,7 +378,7 @@ func (d *AuthService) GetUserByEmail(ctx context.Context, email string) (auth.Us
 		&user.Following,
 	)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return auth.User{}, fmt.Errorf("error rolling back transaction: %w", e)
 		}
 
@@ -447,18 +389,13 @@ func (d *AuthService) GetUserByEmail(ctx context.Context, email string) (auth.Us
 		return auth.User{}, fmt.Errorf("error getting user: %w", err)
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(ctx)
 	if err != nil {
-		if e := tx.Rollback(); e != nil {
+		if e := tx.Rollback(ctx); e != nil {
 			return auth.User{}, fmt.Errorf("error rolling back transaction: %w", e)
 		}
 
 		return auth.User{}, fmt.Errorf("error committing transaction: %w", err)
-	}
-
-	err = conn.Close()
-	if err != nil {
-		log.Printf("error closing connection: %v", err)
 	}
 
 	if nullAvatarUrl.Valid {
