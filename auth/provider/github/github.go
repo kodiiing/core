@@ -14,7 +14,7 @@ type github struct {
 	ClientSecret string
 }
 
-func New(id, secret string) *github {
+func New(id, secret string) provider.Authentication {
 	return &github{
 		ClientId:     id,
 		ClientSecret: secret,
