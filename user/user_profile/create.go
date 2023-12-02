@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	user_stub "kodiiing/user/stub"
 	"strings"
 )
@@ -16,18 +15,8 @@ func (u *Repository) Create(ctx context.Context, profile UserProfile) error {
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, pgx.TxOptions{
-		IsoLevel:   pgx.RepeatableRead,
-		AccessMode: pgx.ReadWrite,
-	})
-	if err != nil {
-		return fmt.Errorf("creating transaction: %w", err)
-	}
-
-	_, err = tx.Exec(
-		ctx,
-		`INSERT INTO 
-    	user_profiles 
+	var insertStmt = `INSERT INTO 
+    user_profiles 
     (
      user_id,
      join_reason,
@@ -37,7 +26,8 @@ func (u *Repository) Create(ctx context.Context, profile UserProfile) error {
      target
     )
     VALUES 
-    ($1, $2, $3, $4, $5, $6)`,
+    ($1, $2, $3, $4, $5, $6)`
+	_, err = conn.Exec(ctx, insertStmt,
 		profile.UserID,
 		profile.JoinReason,
 		sql.NullString{
@@ -55,16 +45,7 @@ func (u *Repository) Create(ctx context.Context, profile UserProfile) error {
 		},
 	)
 	if err != nil {
-		if e := tx.Rollback(ctx); e != nil {
-			return fmt.Errorf("rolling back transaction: %w (%s)", e, err.Error())
-		}
-
 		return fmt.Errorf("executing insert query: %w", err)
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return fmt.Errorf("commiting transaction: %w", err)
 	}
 
 	return nil
