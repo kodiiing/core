@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"kodiiing/user/user_profile"
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
 	"time"
 
 	authservice "kodiiing/auth/service"
@@ -77,10 +78,16 @@ func ApiServer(ctx context.Context) error {
 		return fmt.Errorf("failed to migrate: %v", errCreateCollection)
 	}
 
+	// Build repositories
+	userProfileRepository, err := user_profile.NewUserProfileRepository(pgxPool)
+	if err != nil {
+		return fmt.Errorf("creating user profile repository: %w", err)
+	}
+
 	app := chi.NewRouter()
 
 	app.Mount("/Hack", hackstub.NewHackServiceServer(hackservice.NewHackService(config.Environment, pgxPool, search)))
-	app.Mount("/User", userstub.NewUserServiceServer(userservice.NewUserService(config.Environment, pgxPool)))
+	app.Mount("/User", userstub.NewUserServiceServer(userservice.NewUserService(config.Environment, userProfileRepository)))
 	app.Mount("/Auth", authstub.NewAuthenticationServiceServer(authservice.NewAuthService(config.Environment, pgxPool, memory)))
 	app.Mount("/CodeReview", codereviewstub.NewCodeReviewServiceServer(codereviewservice.NewCodeReviewService(config.Environment, pgxPool)))
 
@@ -93,10 +100,10 @@ func ApiServer(ctx context.Context) error {
 	}
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGINT)
+	signal.Notify(sig, os.Interrupt)
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("error during listening server: %v", err)
 		}
 	}()
