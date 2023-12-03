@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS user_profiles (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGSERIAL REFERENCES users(id),
+    user_id BIGINT REFERENCES users(id),
     join_reason SMALLINT NOT NULL DEFAULT 4,
     join_reason_other TEXT NULL,
     coded_before BOOLEAN NOT NULL DEFAULT FALSE,
