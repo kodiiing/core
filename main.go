@@ -15,7 +15,6 @@ import (
 	authstub "kodiiing/auth/stub"
 	codereviewservice "kodiiing/codereview/service"
 	codereviewstub "kodiiing/codereview/stub"
-	hackprovider "kodiiing/hack/provider"
 	hackservice "kodiiing/hack/service"
 	hackstub "kodiiing/hack/stub"
 	userservice "kodiiing/user/service"
@@ -73,10 +72,10 @@ func ApiServer(ctx context.Context) error {
 	}(memory)
 
 	//Collection schema (Typesense)
-	errCreateCollection := hackprovider.CreateCollections(ctx, search)
-	if errCreateCollection != nil {
-		return fmt.Errorf("failed to migrate: %v", errCreateCollection)
-	}
+	// errCreateCollection := hackprovider.CreateCollections(ctx, search)
+	// if errCreateCollection != nil {
+	// 	return fmt.Errorf("failed to migrate: %v", errCreateCollection)
+	// }
 
 	// Build repositories
 	userProfileRepository, err := user_profile.NewUserProfileRepository(pgxPool)
@@ -90,6 +89,7 @@ func ApiServer(ctx context.Context) error {
 	app.Mount("/User", userstub.NewUserServiceServer(userservice.NewUserService(config.Environment, userProfileRepository)))
 	app.Mount("/Auth", authstub.NewAuthenticationServiceServer(authservice.NewAuthService(config.Environment, pgxPool, memory)))
 	app.Mount("/CodeReview", codereviewstub.NewCodeReviewServiceServer(codereviewservice.NewCodeReviewService(config.Environment, pgxPool)))
+	// app.Mount("/Task", )
 
 	server := &http.Server{
 		Addr:         ":" + config.Port,
@@ -103,6 +103,7 @@ func ApiServer(ctx context.Context) error {
 	signal.Notify(sig, os.Interrupt)
 
 	go func() {
+		log.Printf("listeing on port: %s", config.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("error during listening server: %v", err)
 		}

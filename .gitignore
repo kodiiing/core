@@ -117,3 +117,5 @@ fabric.properties
 # Go workspace file
 go.work
 
+# Configuratin file
+configuration-file.yml
