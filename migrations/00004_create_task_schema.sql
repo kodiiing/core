@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(63) NOT NULL DEFAULT 'system',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_by TIMESTAMPTZ NOT NULL DEFAULT 'system'
+    updated_by VARCHAR(63) NOT NULL DEFAULT 'system'
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_difficulty ON tasks (difficulty);
