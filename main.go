@@ -11,12 +11,17 @@ import (
 	"os/signal"
 	"time"
 
+	auth_jwt "kodiiing/auth/jwt"
+	auth_middleware "kodiiing/auth/middleware"
 	authservice "kodiiing/auth/service"
 	authstub "kodiiing/auth/stub"
 	codereviewservice "kodiiing/codereview/service"
 	codereviewstub "kodiiing/codereview/stub"
 	hackservice "kodiiing/hack/service"
 	hackstub "kodiiing/hack/stub"
+	taskrepository "kodiiing/task/repository"
+	taskservice "kodiiing/task/service"
+	taskstub "kodiiing/task/stub"
 	userservice "kodiiing/user/service"
 	userstub "kodiiing/user/stub"
 
@@ -84,14 +89,39 @@ func ApiServer(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("creating user profile repository: %w", err)
 	}
+	taskRepository := taskrepository.NewTaskRepository(&taskrepository.Dependency{
+		DB: pgxPool,
+	})
+
+	// Build service
+	authService := authservice.NewAuthService(config.Environment, pgxPool, memory)
+
+	// Build lib
+	// TODO: change this into the actual value
+	authJwt := auth_jwt.NewJwt(
+		[]byte("todo_private_key"),
+		[]byte("todo_public_key"),
+		[]byte("todo_refresh_private_key"),
+		[]byte("todo_refresh_public_key"),
+		"todo_issuer",
+		"todo_subject",
+		"todo_audience",
+	)
+
+	// Build middleware
+	authMiddleware := auth_middleware.NewAuthMiddleware(authService, authJwt)
 
 	app := chi.NewRouter()
 
 	app.Mount("/Hack", hackstub.NewHackServiceServer(hackservice.NewHackService(config.Environment, pgxPool, search)))
 	app.Mount("/User", userstub.NewUserServiceServer(userservice.NewUserService(config.Environment, userProfileRepository)))
-	app.Mount("/Auth", authstub.NewAuthenticationServiceServer(authservice.NewAuthService(config.Environment, pgxPool, memory)))
+	app.Mount("/Auth", authstub.NewAuthenticationServiceServer(authService))
 	app.Mount("/CodeReview", codereviewstub.NewCodeReviewServiceServer(codereviewservice.NewCodeReviewService(config.Environment, pgxPool)))
-	// app.Mount("/Task", )
+	app.Mount("/Task", taskstub.NewTaskServiceServer(taskservice.NewTaskService(&taskservice.Dependency{
+		Pool:           pgxPool,
+		Authentication: authMiddleware,
+		TaskRepository: taskRepository,
+	})))
 
 	server := &http.Server{
 		Addr:         ":" + config.Port,

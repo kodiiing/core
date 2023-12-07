@@ -18,7 +18,7 @@ type TaskService struct {
 type Dependency struct {
 	Pool           *pgxpool.Pool
 	Authentication auth.Authenticate
-	taskRepository *taskRepository.Repository
+	TaskRepository *taskRepository.Repository
 }
 
 func NewTaskService(d *Dependency) *TaskService {
@@ -28,13 +28,13 @@ func NewTaskService(d *Dependency) *TaskService {
 	if d.Authentication == nil {
 		log.Fatal("[x] authentication service required on task/service module")
 	}
-	if d.taskRepository == nil {
+	if d.TaskRepository == nil {
 		log.Fatal("[x] taskRepository required on task/service module")
 	}
 
 	return &TaskService{
 		pool:           d.Pool,
 		authentication: d.Authentication,
-		taskRepository: d.taskRepository,
+		taskRepository: d.TaskRepository,
 	}
 }

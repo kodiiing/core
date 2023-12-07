@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *TaskService) ListTask(ctx context.Context, req task_stub.ListTaskRequest) (*task_stub.ListTaskResponse, *task_stub.TaskServiceError) {
+func (s *TaskService) ListTasks(ctx context.Context, req task_stub.ListTaskRequest) (*task_stub.ListTaskResponse, *task_stub.TaskServiceError) {
 	// authenticate user
 	authenticatedUser, err := s.authentication.Authenticate(ctx, req.Auth.AccessToken)
 	if err != nil {
