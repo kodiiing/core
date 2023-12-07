@@ -31,7 +31,7 @@ func (r *Repository) ListTask(ctx context.Context, userId int64, trackId string)
 
 	var findTaskSql = `
 	SELECT
-		t.id AS task_id, t.title, t.description, t.difficulty, t.content, t.author,
+		t.id AS task_id, t.title, t.description, t.difficulty, t.content, u.name AS author,
 		t.created_at, t.created_by, t.updated_at, t.updated_by,
 		ut.fiinished_at, ut.satisfaction_level,
 		CASE
@@ -44,6 +44,7 @@ func (r *Repository) ListTask(ctx context.Context, userId int64, trackId string)
 		END AS completed,
 	FROM
 		tasks AS t
+		INNER JOIN users AS u ON u.id = t.author
 		LEFT JOIN user_tasks AS ut ON ut.task_id = t.id AND ut.user_id = $1`
 
 	rows, err := tx.Query(ctx, findTaskSql, userId)

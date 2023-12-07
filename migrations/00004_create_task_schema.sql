@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     description VARCHAR(511) NOT NULL,
     difficulty SMALLINT NOT NULL,
     content TEXT NOT NULL,
-    author VARCHAR(63) NOT NULL,
+    author BIGINT REFERENCES users(id),
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(63) NOT NULL DEFAULT 'system',

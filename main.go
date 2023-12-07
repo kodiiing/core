@@ -20,6 +20,8 @@ import (
 	userservice "kodiiing/user/service"
 	userstub "kodiiing/user/stub"
 
+	hackprovider "kodiiing/hack/provider"
+
 	"github.com/allegro/bigcache/v3"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -72,10 +74,10 @@ func ApiServer(ctx context.Context) error {
 	}(memory)
 
 	//Collection schema (Typesense)
-	// errCreateCollection := hackprovider.CreateCollections(ctx, search)
-	// if errCreateCollection != nil {
-	// 	return fmt.Errorf("failed to migrate: %v", errCreateCollection)
-	// }
+	errCreateCollection := hackprovider.CreateCollections(ctx, search)
+	if errCreateCollection != nil {
+		return fmt.Errorf("failed to migrate: %v", errCreateCollection)
+	}
 
 	// Build repositories
 	userProfileRepository, err := user_profile.NewUserProfileRepository(pgxPool)
