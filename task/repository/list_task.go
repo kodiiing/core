@@ -72,6 +72,14 @@ func (r *Repository) ListTask(ctx context.Context, userId int64, trackId string)
 
 		out = append(out, row)
 	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		if e := tx.Rollback(ctx); e != nil {
+			return out, fmt.Errorf("rolling back transaction: %w (%s)", e, err.Error())
+		}
+
+		return out, fmt.Errorf("executing insert query: %w", err)
+	}
 
 	return
 }
