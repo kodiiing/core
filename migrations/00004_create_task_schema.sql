@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS user_tasks (
     task_id BIGINT REFERENCES tasks(id),
     user_id BIGINT REFERENCES users(id),
     status SMALLINT NOT NULL DEFAULT 0,
-    started_at TIMESTAMPTZ NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     finished_at TIMESTAMPTZ NULL,
     satisfaction_level SMALLINT NULL
 );
