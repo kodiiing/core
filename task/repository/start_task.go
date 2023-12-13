@@ -38,16 +38,7 @@ func (r *Repository) StartTask(ctx context.Context, userId, taskId int64) (out S
 		return
 	}
 
-	var insertUserTaskSql = `
-	INSERT INTO user_tasks
-	(
-		task_id, user_id, status, started_at
-	)
-	VALUES
-	(
-		$1, $2, $3, $d
-	)
-	RETURNING finished_at, satisfaction_level`
+	var insertUserTaskSql = "INSERT INTO user_tasks (task_id, user_id, status, started_at) VALUES ($1, $2, $3, $d) RETURNING finished_at, satisfaction_level"
 
 	err = r.db.QueryRow(ctx, insertUserTaskSql,
 		taskId, userId, task.USER_TASK_STATUS_IN_PROGRESS, time.Now().UTC().Format(time.RFC3339),
