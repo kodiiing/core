@@ -1,4 +1,4 @@
-// auth provides authentication procedure
+// Package auth provides authentication procedure
 package auth
 
 import (
@@ -7,17 +7,6 @@ import (
 	"net/url"
 	"time"
 )
-
-type Provider uint8
-
-const (
-	ProviderGithub Provider = iota
-	ProviderGitlab
-)
-
-func (p Provider) ToUint8() uint8 {
-	return uint8(p)
-}
 
 type User struct {
 	ID       int64
@@ -34,7 +23,7 @@ type User struct {
 	PublicRepository int64
 	Followers        int64
 	Following        int64
-	// CreatedAt referes to the time that the user
+	// CreatedAt refers to the time that the user
 	// register to their corresponding provider.
 	CreatedAt time.Time
 	// RegisteredAt refers to the time that the user is register
