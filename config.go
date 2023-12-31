@@ -1,8 +1,9 @@
 package main
 
 import (
-	"dario.cat/mergo"
 	"os"
+
+	"dario.cat/mergo"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog/log"
@@ -24,6 +25,9 @@ type Config struct {
 		Port string `yaml:"port" envconfig:"SEARCH_PORT" default:"8108"`
 		Key  string `yaml:"key" envconfig:"SEARCH_KEY" default:""`
 	} `yaml:"search"`
+	Otel struct {
+		ReceiverOtlpEndpoint string `yaml:"receiver_otlp_endpoint" envconfig:"OTEL_RECEIVER_OTLP_ENDPOINT"`
+	} `yaml:"otel"`
 }
 
 func GetConfig(configFile string) (Config, error) {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"kodiiing/telemetry/trace"
 	"kodiiing/user/user_profile"
 	"net/http"
 	"os"
@@ -34,6 +35,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/typesense/typesense-go/typesense"
 	"github.com/urfave/cli/v2"
+	"go.opentelemetry.io/otel"
 )
 
 func ApiServer(ctx context.Context) error {
@@ -134,6 +136,8 @@ func ApiServer(ctx context.Context) error {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 
+	otelShutdownFunc := InitTelemetry(config)
+
 	go func() {
 		log.Printf("Listening on port: %s", config.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -149,6 +153,7 @@ func ApiServer(ctx context.Context) error {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("error during shutting down server: %v", err)
 	}
+	otelShutdownFunc()
 
 	return nil
 }
@@ -275,6 +280,34 @@ func App() *cli.App {
 				},
 			},
 		},
+	}
+}
+
+func InitTelemetry(cfg Config) (shutDownFunc func() error) {
+	exp, err := trace.CreateGrpcExporter(context.Background(), cfg.Otel.ReceiverOtlpEndpoint)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Creating otel grpc exporter")
+	}
+
+	traceProvider := trace.NewTraceProvider(context.Background(), exp)
+
+	otel.SetTracerProvider(traceProvider)
+
+	return func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		err = traceProvider.Shutdown(ctx)
+		if err != nil {
+			return err
+		}
+
+		err = exp.Shutdown(ctx)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
