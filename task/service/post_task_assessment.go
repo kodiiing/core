@@ -7,10 +7,9 @@ import (
 	"kodiiing/auth"
 	"kodiiing/task/repository"
 	task_stub "kodiiing/task/stub"
+	"log"
 	"net/http"
 	"strconv"
-
-	"github.com/jackc/pgx/v5"
 )
 
 func ValidatePostTaskAssessmentReq(req task_stub.PostTaskAssessmentRequest) *task_stub.TaskServiceError {
@@ -62,7 +61,14 @@ func (s *TaskService) PostTaskAssessment(ctx context.Context, req task_stub.Post
 	}
 
 	// insert assessment
-	taskId, _ := strconv.ParseInt(req.TaskId, 10, 64)
+	taskId, err := strconv.ParseInt(req.TaskId, 10, 64)
+	if err != nil {
+		return nil, &task_stub.TaskServiceError{
+			StatusCode: http.StatusBadRequest,
+			Error:      fmt.Errorf("invalid task id"),
+		}
+	}
+
 	affected, err := s.taskRepository.InsertTaskAssessment(ctx, repository.InsertTaskAssessmentIn{
 		UserId:            authenticatedUser.ID,
 		TaskId:            taskId,
@@ -70,10 +76,10 @@ func (s *TaskService) PostTaskAssessment(ctx context.Context, req task_stub.Post
 		Comments:          req.Comments,
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, task_stub.TaskRepositoryErrNoRows) {
 			return nil, &task_stub.TaskServiceError{
-				StatusCode: http.StatusNotFound,
-				Error:      fmt.Errorf("task not found"),
+				StatusCode: http.StatusBadRequest,
+				Error:      fmt.Errorf("invalid task id or user id"),
 			}
 		}
 
@@ -84,10 +90,8 @@ func (s *TaskService) PostTaskAssessment(ctx context.Context, req task_stub.Post
 	}
 
 	if affected == 0 {
-		return nil, &task_stub.TaskServiceError{
-			StatusCode: http.StatusNotFound,
-			Error:      fmt.Errorf("task not found"),
-		}
+		// TODO: Proper log
+		log.Println("[TaskService - PostTaskAssessment] no task were updated")
 	}
 
 	return &task_stub.EmptyResponse{}, nil

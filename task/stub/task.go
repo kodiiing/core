@@ -6,8 +6,12 @@ import (
 	"log"
 	"net/http"
 
+	"errors"
+
 	"github.com/go-chi/chi/v5"
 )
+
+var TaskRepositoryErrNoRows = errors.New("no rows in result set")
 
 type TaskServiceError struct {
 	StatusCode int

@@ -2,7 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	task_stub "kodiiing/task/stub"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func (r *Repository) CountUserTaskByTaskId(ctx context.Context, userId, taskId int64) (total int64, err error) {
@@ -10,6 +14,10 @@ func (r *Repository) CountUserTaskByTaskId(ctx context.Context, userId, taskId i
 
 	err = r.db.QueryRow(ctx, countUserTaskSql, userId, taskId).Scan(&total)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, task_stub.TaskRepositoryErrNoRows
+		}
+
 		return 0, fmt.Errorf("error executing count query: %w", err)
 	}
 
