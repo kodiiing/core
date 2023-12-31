@@ -80,7 +80,7 @@ type TaskServiceServer interface {
 
 	// Give an assessment to the user about the task, whether they are happy with it or they
 	// don't like the given task.
-	PostTaskAssessmentRequest(ctx context.Context, req PostTaskAssessmentRequest) (*EmptyResponse, *TaskServiceError)
+	PostTaskAssessment(ctx context.Context, req PostTaskAssessmentRequest) (*EmptyResponse, *TaskServiceError)
 }
 
 func NewTaskServiceServer(implementation TaskServiceServer) *chi.Mux {
@@ -172,7 +172,7 @@ func NewTaskServiceServer(implementation TaskServiceServer) *chi.Mux {
 			return
 		}
 
-		resp, err := implementation.PostTaskAssessmentRequest(r.Context(), req)
+		resp, err := implementation.PostTaskAssessment(r.Context(), req)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(err.StatusCode)
