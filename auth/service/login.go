@@ -62,28 +62,48 @@ func (d *AuthService) Login(ctx context.Context, req *auth_stub.LoginRequest) (*
 		// User not found. We should register the user
 		userId, err := d.CreateUser(ctx, &providerUser)
 		if err != nil {
-			// TODO
+			return nil, &auth_stub.AuthenticationServiceError{
+				StatusCode: http.StatusInternalServerError,
+				Error:      err,
+			}
 		}
 		user.ID = userId
 
 		repos, err := currentAuthenticationProvider.GetPublicRepositories(ctx, providerUser.Username)
 		if err != nil {
-			// TODO
+			return nil, &auth_stub.AuthenticationServiceError{
+				StatusCode: http.StatusInternalServerError,
+				Error:      err,
+			}
 		}
 
 		err = d.CreateUserRepository(ctx, userId, repos)
 		if err != nil {
-			// TODO
+			return nil, &auth_stub.AuthenticationServiceError{
+				StatusCode: http.StatusInternalServerError,
+				Error:      err,
+			}
 		}
-
 	}
 
 	// Generate access token from ID
-	// TODO: generate proper access token
-	appAccessToken := ""
+	appAccessToken, _, err := d.jwt.Sign(user.ID)
+	if err != nil {
+		return nil, &auth_stub.AuthenticationServiceError{
+			StatusCode: http.StatusInternalServerError,
+			Error:      err,
+		}
+	}
+
 	err = d.sessionStore.Set(ctx, appAccessToken, user.ID)
 	if err != nil {
-		// TODO
+		return nil, &auth_stub.AuthenticationServiceError{
+			StatusCode: http.StatusInternalServerError,
+			Error:      err,
+		}
 	}
-	return &auth_stub.LoginResponse{}, nil
+
+	return &auth_stub.LoginResponse{
+		AccessToken: appAccessToken,
+	}, nil
 }

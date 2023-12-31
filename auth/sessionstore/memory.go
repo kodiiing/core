@@ -13,6 +13,10 @@ type MemoryStore struct {
 	cache *bigcache.BigCache
 }
 
+func (m *MemoryStore) Revoke(ctx context.Context, accessToken string) error {
+	return m.cache.Delete(accessToken)
+}
+
 func (m *MemoryStore) Get(ctx context.Context, accessToken string) (id int64, err error) {
 	if accessToken == "" {
 		return 0, fmt.Errorf("%w: access token", ErrEmptyValue)

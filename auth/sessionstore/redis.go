@@ -4,6 +4,11 @@ import "context"
 
 type RedisStore struct{}
 
+func (r *RedisStore) Revoke(ctx context.Context, accessToken string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (r *RedisStore) Get(ctx context.Context, accessToken string) (id int64, err error) {
 	//TODO implement me
 	panic("implement me")

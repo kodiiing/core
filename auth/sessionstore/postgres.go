@@ -10,6 +10,11 @@ type PostgresStore struct {
 	db *pgxpool.Pool
 }
 
+func (p *PostgresStore) Revoke(ctx context.Context, accessToken string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (p *PostgresStore) Get(ctx context.Context, accessToken string) (id int64, err error) {
 	//TODO implement me
 	// Read to user_accesstoken table
