@@ -47,7 +47,7 @@ func (m *MemoryStore) Set(ctx context.Context, accessToken string, id int64) err
 	return m.cache.Set(accessToken, []byte(strconv.FormatInt(id, 10)))
 }
 
-func NewMemory() (Store, error) {
+func NewMemoryStore() (Store, error) {
 	cache, err := bigcache.New(context.Background(), bigcache.DefaultConfig(time.Hour*24))
 	if err != nil {
 		return nil, fmt.Errorf("creating cache instance: %w", err)
