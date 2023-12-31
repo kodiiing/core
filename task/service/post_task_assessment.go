@@ -76,7 +76,7 @@ func (s *TaskService) PostTaskAssessment(ctx context.Context, req task_stub.Post
 		Comments:          req.Comments,
 	})
 	if err != nil {
-		if errors.Is(err, task_stub.TaskRepositoryErrNoRows) {
+		if errors.Is(err, repository.ErrNoRows) {
 			return nil, &task_stub.TaskServiceError{
 				StatusCode: http.StatusBadRequest,
 				Error:      fmt.Errorf("invalid task id or user id"),

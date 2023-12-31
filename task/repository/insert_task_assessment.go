@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 
-	task_stub "kodiiing/task/stub"
-
 	"github.com/jackc/pgx/v5"
 )
 
@@ -18,7 +16,7 @@ type InsertTaskAssessmentIn struct {
 
 func (r *Repository) InsertTaskAssessment(ctx context.Context, data InsertTaskAssessmentIn) (affected int64, err error) {
 	if data.UserId == 0 || data.TaskId == 0 {
-		return 0, task_stub.TaskRepositoryErrNoRows
+		return 0, ErrNoRows 
 	}
 
 	var insertAssessmentSql = `UPDATE user_tasks SET 
@@ -35,7 +33,7 @@ func (r *Repository) InsertTaskAssessment(ctx context.Context, data InsertTaskAs
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, task_stub.TaskRepositoryErrNoRows
+			return 0, ErrNoRows
 		}
 
 		return
