@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS user_tasks (
     started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     finished_at TIMESTAMPTZ NULL,
     satisfaction_level SMALLINT NULL
-    comments VARCHAR(511) NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_task_id ON user_tasks (task_id, user_id);
