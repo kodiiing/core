@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Setup jq
+        run: apt-get update && apt-get install -y jq
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
