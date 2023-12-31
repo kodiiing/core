@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Setup jq
-        run: apt-get update && apt-get install -y jq
+        uses: dcarbone/install-jq-action@v2.1.0
 
       - name: Checkout code
         uses: actions/checkout@v4
