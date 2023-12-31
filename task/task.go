@@ -1,0 +1,10 @@
+package task
+
+type UserTaskStatus int8
+
+const (
+	USER_TASK_STATUS_UNSPECIFIED = iota
+
+	USER_TASK_STATUS_IN_PROGRESS
+	USER_TASK_STATUS_FINISHED
+)
