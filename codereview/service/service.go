@@ -13,7 +13,7 @@ type CodeReviewService struct {
 	environment string
 }
 
-func NewCodeReviewService(env string, pool *pgxpool.Pool) *CodeReviewService {
+func NewCodeReviewService(env string, pool *pgxpool.Pool) codereview_stub.CodeReviewServiceServer {
 	return &CodeReviewService{
 		pool:        pool,
 		environment: env,

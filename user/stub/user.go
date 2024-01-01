@@ -1,4 +1,4 @@
-package user_stub
+package user
 
 import (
 	"context"
@@ -33,11 +33,12 @@ type Authentication struct {
 type JoinReason uint32
 
 const (
-	JoinReasonSchool     JoinReason = 0
-	JoinReasonWork       JoinReason = 1
-	JoinReasonFascinated JoinReason = 2
-	JoinReasonFriend     JoinReason = 3
-	JoinReasonOther      JoinReason = 4
+	JoinReasonJOIN_REASON_UNSPECIFIED JoinReason = 0
+	JoinReasonJOIN_REASON_SCHOOL      JoinReason = 1
+	JoinReasonJOIN_REASON_WORK        JoinReason = 2
+	JoinReasonJOIN_REASON_FASCINATED  JoinReason = 3
+	JoinReasonJOIN_REASON_FRIEND      JoinReason = 4
+	JoinReasonJOIN_REASON_OTHER       JoinReason = 5
 )
 
 type UserServiceServer interface {

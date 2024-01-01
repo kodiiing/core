@@ -11,8 +11,8 @@ import (
 	"os/signal"
 	"time"
 
-	auth_jwt "kodiiing/auth/jwt"
-	auth_middleware "kodiiing/auth/middleware"
+	authjwt "kodiiing/auth/jwt"
+	authmiddleware "kodiiing/auth/middleware"
 	authservice "kodiiing/auth/service"
 	authstub "kodiiing/auth/stub"
 	codereviewservice "kodiiing/codereview/service"
@@ -39,7 +39,7 @@ import (
 func ApiServer(ctx context.Context) error {
 	config, err := GetConfig("configuration-file.yml")
 	if err != nil {
-		return fmt.Errorf("Error getting configuration file: %w", err)
+		return fmt.Errorf("getting configuration file: %w", err)
 	}
 
 	pgxConfig, err := pgxpool.ParseConfig(fmt.Sprintf(
@@ -98,7 +98,7 @@ func ApiServer(ctx context.Context) error {
 
 	// Build lib
 	// TODO: change this into the actual value
-	authJwt := auth_jwt.NewJwt(
+	authJwt := authjwt.NewJwt(
 		[]byte("todo_private_key"),
 		[]byte("todo_public_key"),
 		[]byte("todo_refresh_private_key"),
@@ -109,7 +109,16 @@ func ApiServer(ctx context.Context) error {
 	)
 
 	// Build middleware
-	authMiddleware := auth_middleware.NewAuthMiddleware(authService, authJwt)
+	authMiddleware := authmiddleware.NewAuthMiddleware(authService, authJwt)
+
+	taskService, err := taskservice.NewTaskService(&taskservice.Config{
+		Pool:           pgxPool,
+		Authentication: authMiddleware,
+		TaskRepository: taskRepository,
+	})
+	if err != nil {
+		return fmt.Errorf("creating task service: %w", err)
+	}
 
 	app := chi.NewRouter()
 
@@ -117,11 +126,7 @@ func ApiServer(ctx context.Context) error {
 	app.Mount("/User", userstub.NewUserServiceServer(userservice.NewUserService(config.Environment, userProfileRepository)))
 	app.Mount("/Auth", authstub.NewAuthenticationServiceServer(authService))
 	app.Mount("/CodeReview", codereviewstub.NewCodeReviewServiceServer(codereviewservice.NewCodeReviewService(config.Environment, pgxPool)))
-	app.Mount("/Task", taskstub.NewTaskServiceServer(taskservice.NewTaskService(&taskservice.Dependency{
-		Pool:           pgxPool,
-		Authentication: authMiddleware,
-		TaskRepository: taskRepository,
-	})))
+	app.Mount("/Task", taskstub.NewTaskServiceServer(taskService))
 
 	server := &http.Server{
 		Addr:         ":" + config.Port,
@@ -209,7 +214,7 @@ func App() *cli.App {
 						Action: func(c *cli.Context) error {
 							config, err := GetConfig(c.String("configuration-file"))
 							if err != nil {
-								return fmt.Errorf("Error getting configuration file: %w", err)
+								return fmt.Errorf("getting configuration file: %w", err)
 							}
 							db, err := sql.Open("postgres", fmt.Sprintf(
 								"user=%s password=%s host=%s port=%d dbname=%s sslmode=disable",
@@ -243,7 +248,7 @@ func App() *cli.App {
 						Action: func(c *cli.Context) error {
 							config, err := GetConfig(c.String("configuration-file"))
 							if err != nil {
-								return fmt.Errorf("Error getting configuration file: %w", err)
+								return fmt.Errorf("getting configuration file: %w", err)
 							}
 							db, err := sql.Open("postgres", fmt.Sprintf(
 								"user=%s password=%s host=%s port=%d dbname=%s sslmode=disable",

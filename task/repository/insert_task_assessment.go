@@ -16,7 +16,7 @@ type InsertTaskAssessmentIn struct {
 
 func (r *Repository) InsertTaskAssessment(ctx context.Context, data InsertTaskAssessmentIn) (affected int64, err error) {
 	if data.UserId == 0 || data.TaskId == 0 {
-		return 0, ErrNoRows 
+		return 0, ErrNoRows
 	}
 
 	var insertAssessmentSql = `UPDATE user_tasks SET 

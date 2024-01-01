@@ -1,4 +1,4 @@
-package codereview_stub
+package codereview
 
 import (
 	"context"

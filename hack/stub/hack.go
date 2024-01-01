@@ -4,7 +4,7 @@
 // in a short text manner. Imagine this like Hacker News
 // (the news.ycombinator.com) or Reddit, but combine it
 // with Twitter.
-package hack_stub
+package hack
 
 import (
 	"context"
@@ -97,10 +97,11 @@ type Comment struct {
 type SortCriteria uint32
 
 const (
-	SortCriteriaScore        SortCriteria = 0
-	SortCriteriaComments     SortCriteria = 1
-	SortCriteriaCreated_date SortCriteria = 2
-	SortCriteriaUpdated_date SortCriteria = 3
+	SortCriteriaSORT_CRITERIA_UNSPECIFIED  SortCriteria = 0
+	SortCriteriaSORT_CRITERIA_SCORE        SortCriteria = 1
+	SortCriteriaSORT_CRITERIA_COMMENTS     SortCriteria = 2
+	SortCriteriaSORT_CRITERIA_CREATED_DATE SortCriteria = 3
+	SortCriteriaSORT_CRITERIA_UPDATED_DATE SortCriteria = 4
 )
 
 type HackServiceServer interface {

@@ -38,7 +38,7 @@ func ValidatePostTaskAssessmentReq(req task_stub.PostTaskAssessmentRequest) *tas
 	return nil
 }
 
-func (s *TaskService) PostTaskAssessment(ctx context.Context, req task_stub.PostTaskAssessmentRequest) (*task_stub.EmptyResponse, *task_stub.TaskServiceError) {
+func (s *TaskService) PostTaskAssessment(ctx context.Context, req *task_stub.PostTaskAssessmentRequest) (*task_stub.EmptyResponse, *task_stub.TaskServiceError) {
 	// authenticate user
 	authenticatedUser, err := s.authentication.Authenticate(ctx, req.Auth.AccessToken)
 	if err != nil {
@@ -56,7 +56,7 @@ func (s *TaskService) PostTaskAssessment(ctx context.Context, req task_stub.Post
 	}
 
 	// validate request
-	if err := ValidatePostTaskAssessmentReq(req); err != nil {
+	if err := ValidatePostTaskAssessmentReq(*req); err != nil {
 		return &task_stub.EmptyResponse{}, err
 	}
 
