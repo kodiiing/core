@@ -26,7 +26,7 @@ type Config struct {
 		Key  string `yaml:"key" envconfig:"SEARCH_KEY" default:""`
 	} `yaml:"search"`
 	Otel struct {
-		ReceiverOtlpEndpoint string `yaml:"receiver_otlp_endpoint" envconfig:"OTEL_RECEIVER_OTLP_ENDPOINT"`
+		ReceiverOtlpGrpcEndpoint string `yaml:"receiver_otlp_grpc_endpoint" envconfig:"OTEL_RECEIVER_OTLP_GRPC_ENDPOINT"`
 	} `yaml:"otel"`
 }
 

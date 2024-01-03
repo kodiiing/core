@@ -10,20 +10,54 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
-func NewTraceProvider(ctx context.Context, exp sdktrace.SpanExporter) *sdktrace.TracerProvider {
-	r := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName("Kodiiing"),
-	)
+type ShutdownFunc func(context.Context) error
 
-	return sdktrace.NewTracerProvider(
-		sdktrace.WithResource(r),
-		sdktrace.WithBatcher(exp),
-	)
+type Config struct {
+	ServiceName string
+
+	GrpcEndpoint string
 }
 
-func CreateGrpcExporter(ctx context.Context, endpoint string) (trace.SpanExporter, error) {
-	return otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(endpoint),
+type Trace struct {
+	serviceName string
+
+	grpcEndpoint string
+
+	exporter trace.SpanExporter
+}
+
+func New(cfg Config) *Trace {
+	return &Trace{
+		serviceName:  cfg.ServiceName,
+		grpcEndpoint: cfg.GrpcEndpoint,
+	}
+}
+
+func (t *Trace) WithGrpcExporter(ctx context.Context) (*Trace, error) {
+	exp, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithEndpoint(t.grpcEndpoint),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	t.exporter = exp
+
+	return t, nil
+}
+
+func (t *Trace) CreateTraceProvider() *sdktrace.TracerProvider {
+	r := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName(t.serviceName),
+	)
+
+	opts := []sdktrace.TracerProviderOption{
+		sdktrace.WithResource(r),
+	}
+	if t.exporter != nil {
+		opts = append(opts, sdktrace.WithBatcher(t.exporter))
+	}
+
+	return sdktrace.NewTracerProvider(opts...)
 }

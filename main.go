@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"kodiiing/telemetry/trace"
+	"kodiiing/telemetry"
 	"kodiiing/user/user_profile"
 	"net/http"
 	"os"
@@ -35,7 +35,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/typesense/typesense-go/typesense"
 	"github.com/urfave/cli/v2"
-	"go.opentelemetry.io/otel"
 )
 
 func ApiServer(ctx context.Context) error {
@@ -136,12 +135,25 @@ func ApiServer(ctx context.Context) error {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 
-	otelShutdownFunc := InitTelemetry(config)
+	// telemetry
+	telemetryProvider := telemetry.NewTelemetryProvider(telemetry.Config{
+		ServiceName:  "kodiiing",
+		GrpcEndpoint: config.Otel.ReceiverOtlpGrpcEndpoint,
+	})
 
 	go func() {
 		log.Printf("Listening on port: %s", config.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("error during listening server: %v", err)
+		}
+	}()
+
+	var telemetryShutDownFuncs []telemetry.ShutDownFunc
+	go func() {
+		log.Printf("initializing telemetry...")
+		telemetryShutDownFuncs, err = telemetryProvider.Run(context.Background())
+		if err != nil {
+			log.Fatal().Err(err).Msg("initializing telemetry")
 		}
 	}()
 
@@ -153,7 +165,15 @@ func ApiServer(ctx context.Context) error {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("error during shutting down server: %v", err)
 	}
-	otelShutdownFunc()
+
+	for _, shutdownFunc := range telemetryShutDownFuncs {
+		go func(shutDown telemetry.ShutDownFunc) {
+			err := shutDown(shutdownCtx)
+			if err != nil {
+				log.Error().Err(err).Msg("shutdown telemetry...")
+			}
+		}(shutdownFunc)
+	}
 
 	return nil
 }
@@ -280,34 +300,6 @@ func App() *cli.App {
 				},
 			},
 		},
-	}
-}
-
-func InitTelemetry(cfg Config) (shutDownFunc func() error) {
-	exp, err := trace.CreateGrpcExporter(context.Background(), cfg.Otel.ReceiverOtlpEndpoint)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Creating otel grpc exporter")
-	}
-
-	traceProvider := trace.NewTraceProvider(context.Background(), exp)
-
-	otel.SetTracerProvider(traceProvider)
-
-	return func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		err = traceProvider.Shutdown(ctx)
-		if err != nil {
-			return err
-		}
-
-		err = exp.Shutdown(ctx)
-		if err != nil {
-			return err
-		}
-
-		return nil
 	}
 }
 
