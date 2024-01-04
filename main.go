@@ -144,7 +144,7 @@ func ApiServer(ctx context.Context) error {
 	go func() {
 		log.Info().Msgf("Listening on port: %s", config.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("error during listening server: %v", err)
+			log.Info().Msgf("error during listening server: %v", err)
 		}
 	}()
 
