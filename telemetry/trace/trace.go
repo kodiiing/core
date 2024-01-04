@@ -26,24 +26,24 @@ type Trace struct {
 	exporter trace.SpanExporter
 }
 
-func New(cfg Config) *Trace {
-	return &Trace{
+func New(cfg Config) Trace {
+	return Trace{
 		serviceName:  cfg.ServiceName,
 		grpcEndpoint: cfg.GrpcEndpoint,
 	}
 }
 
-func (t *Trace) WithGrpcExporter(ctx context.Context) (*Trace, error) {
+func (t *Trace) WithGrpcExporter(ctx context.Context) (Trace, error) {
 	exp, err := otlptracegrpc.New(ctx,
 		otlptracegrpc.WithEndpoint(t.grpcEndpoint),
 	)
 	if err != nil {
-		return nil, err
+		return Trace{}, err
 	}
 
 	t.exporter = exp
 
-	return t, nil
+	return *t, nil
 }
 
 func (t *Trace) CreateTraceProvider() *sdktrace.TracerProvider {
