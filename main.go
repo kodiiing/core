@@ -150,7 +150,7 @@ func ApiServer(ctx context.Context) error {
 
 	var telemetryShutDownFuncs []telemetry.ShutDownFunc
 	go func() {
-		log.Printf("initializing telemetry...")
+		log.Info().Msg("initializing telemetry")
 		telemetryShutDownFuncs, err = telemetryProvider.Run(context.Background())
 		if err != nil {
 			log.Fatal().Err(err).Msg("initializing telemetry")
