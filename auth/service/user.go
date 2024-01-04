@@ -426,3 +426,89 @@ func (d *AuthService) GetUserByEmail(ctx context.Context, email string) (auth.Us
 
 	return user, nil
 }
+
+func (d *AuthService) GetUserByProviderId(ctx context.Context, providerID int64) (auth.User, error) {
+	tx, err := d.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return auth.User{}, fmt.Errorf("starting transaction: %w", err)
+	}
+
+	var user auth.User
+	var nullAvatarUrl sql.NullString
+	var nullLocation sql.NullString
+	err = tx.QueryRow(
+		ctx,
+		`SELECT
+			users.provider,
+			users.provider_id,
+			users.name,
+			users.username,
+			users.email,
+			users.profile_url,
+			users.created_at,
+			users.registered_at,
+			user_statistics.avatar_url,
+			user_statistics.location,
+			user_statistics.public_repositories,
+			user_statistics.followers,
+			user_statistics.following
+		FROM
+			users
+		INNER JOIN
+			user_statistics
+		ON
+			users.id = user_statistics.user_id
+		WHERE
+			users.provider_id = $1`,
+		providerID,
+	).Scan(
+		&user.Provider,
+		&user.ID,
+		&user.Name,
+		&user.Username,
+		&user.Email,
+		&user.ProfileURL,
+		&user.CreatedAt,
+		&user.RegisteredAt,
+		&nullAvatarUrl,
+		&nullLocation,
+		&user.PublicRepository,
+		&user.Followers,
+		&user.Following,
+	)
+	if err != nil {
+		if e := tx.Rollback(ctx); e != nil {
+			return auth.User{}, fmt.Errorf("error rolling back transaction: %w", e)
+		}
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return auth.User{}, auth.ErrUserNotFound
+		}
+
+		return auth.User{}, fmt.Errorf("error getting user: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		if e := tx.Rollback(ctx); e != nil {
+			return auth.User{}, fmt.Errorf("error rolling back transaction: %w", e)
+		}
+
+		return auth.User{}, fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	if nullAvatarUrl.Valid {
+		avatarUrl, err := url.Parse(nullAvatarUrl.String)
+		if err != nil {
+			return auth.User{}, fmt.Errorf("error parsing avatar url: %w", err)
+		}
+
+		user.AvatarURL = avatarUrl
+	}
+
+	if nullLocation.Valid {
+		user.Location = nullLocation.String
+	}
+
+	return user, nil
+}

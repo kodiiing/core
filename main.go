@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"kodiiing/auth/sessionstore"
 	"kodiiing/user/user_profile"
 	"net/http"
 	"os"
@@ -93,8 +94,13 @@ func ApiServer(ctx context.Context) error {
 		DB: pgxPool,
 	})
 
+	memoryStore, err := sessionstore.NewMemoryStore()
+	if err != nil {
+		return fmt.Errorf("creating memory session store: %w", err)
+	}
+
 	// Build service
-	authService := authservice.NewAuthService(config.Environment, pgxPool, memory)
+	authService := authservice.NewAuthService(config.Environment, pgxPool, memory, memoryStore)
 
 	// Build lib
 	// TODO: change this into the actual value
