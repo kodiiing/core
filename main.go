@@ -166,13 +166,11 @@ func ApiServer(ctx context.Context) error {
 		log.Printf("error during shutting down server: %v", err)
 	}
 
-	for _, shutdownFunc := range telemetryShutDownFuncs {
-		go func(shutDown telemetry.ShutDownFunc) {
-			err := shutDown(shutdownCtx)
-			if err != nil {
-				log.Error().Err(err).Msg("shutdown telemetry...")
-			}
-		}(shutdownFunc)
+	for _, shutDownFunc := range telemetryShutDownFuncs {
+		err := shutDownFunc(shutdownCtx)
+		if err != nil {
+			log.Error().Err(err).Msg("shutdown telemetry...")
+		}
 	}
 
 	return nil
