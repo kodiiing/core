@@ -27,6 +27,7 @@ type Config struct {
 	} `yaml:"search"`
 	Otel struct {
 		ReceiverOtlpGrpcEndpoint string `yaml:"receiver_otlp_grpc_endpoint" envconfig:"OTEL_RECEIVER_OTLP_GRPC_ENDPOINT"`
+		ReceiverOtlpHttpEndpoint string `yaml:"receiver_otlp_http_endpoint" envconfig:"OTEL_RECEIVER_OTLP_HTTP_ENDPOINT"`
 	} `yaml:"otel"`
 }
 

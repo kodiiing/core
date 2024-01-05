@@ -137,8 +137,9 @@ func ApiServer(ctx context.Context) error {
 
 	// telemetry
 	telemetryProvider := telemetry.NewTelemetryProvider(telemetry.Config{
-		ServiceName:  "kodiiing",
-		GrpcEndpoint: config.Otel.ReceiverOtlpGrpcEndpoint,
+		ServiceName:          "kodiiing",
+		GrpcExporterEndpoint: config.Otel.ReceiverOtlpGrpcEndpoint,
+		HttpExporterEndpoint: config.Otel.ReceiverOtlpHttpEndpoint,
 	})
 
 	go func() {

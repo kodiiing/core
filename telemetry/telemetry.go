@@ -13,18 +13,21 @@ type ShutDownFunc func(context.Context) error
 type Config struct {
 	ServiceName string
 
-	GrpcEndpoint string
+	GrpcExporterEndpoint string
+	HttpExporterEndpoint string
 }
 
 type telemetryProvider struct {
-	serviceName  string
-	grpcEndpoint string
+	serviceName          string
+	grpcExporterEndpoint string
+	httpExporterEndpoint string
 }
 
 func NewTelemetryProvider(cfg Config) *telemetryProvider {
 	return &telemetryProvider{
-		serviceName:  cfg.ServiceName,
-		grpcEndpoint: cfg.GrpcEndpoint,
+		serviceName:          cfg.ServiceName,
+		grpcExporterEndpoint: cfg.GrpcExporterEndpoint,
+		httpExporterEndpoint: cfg.HttpExporterEndpoint,
 	}
 }
 
@@ -37,8 +40,9 @@ func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFu
 
 	// create trace
 	trace := ttrace.New(ttrace.Config{
-		ServiceName:  t.serviceName,
-		GrpcEndpoint: t.grpcEndpoint,
+		ServiceName:          t.serviceName,
+		GrpcExporterEndpoint: t.grpcExporterEndpoint,
+		HttpExporterEndpoint: t.httpExporterEndpoint,
 	})
 
 	trace, err = trace.WithGrpcExporter(ctx)
