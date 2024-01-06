@@ -2,10 +2,13 @@ package telemetry
 
 import (
 	"context"
+	tmetric "kodiiing/telemetry/metric"
 	ttrace "kodiiing/telemetry/trace"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 type ShutDownFunc func(context.Context) error
@@ -15,12 +18,14 @@ type Config struct {
 
 	GrpcExporterEndpoint string
 	HttpExporterEndpoint string
+	HttpExporterPath     string
 }
 
 type telemetryProvider struct {
 	serviceName          string
 	grpcExporterEndpoint string
 	httpExporterEndpoint string
+	httpExporterPath     string
 }
 
 func NewTelemetryProvider(cfg Config) *telemetryProvider {
@@ -28,10 +33,17 @@ func NewTelemetryProvider(cfg Config) *telemetryProvider {
 		serviceName:          cfg.ServiceName,
 		grpcExporterEndpoint: cfg.GrpcExporterEndpoint,
 		httpExporterEndpoint: cfg.HttpExporterEndpoint,
+		httpExporterPath:     cfg.HttpExporterPath,
 	}
 }
 
 func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFunc, err error) {
+	// resource
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName(t.serviceName),
+	)
+
 	// propagator
 	propagator := propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
@@ -49,13 +61,38 @@ func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFu
 	if err != nil {
 		return nil, err
 	}
+	trace, err = trace.WithHttpExporter(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	traceProvider := trace.CreateTraceProvider()
 
 	otel.SetTracerProvider(traceProvider)
 	otel.SetTextMapPropagator(propagator)
 
-	shutDownFuncs = append(shutDownFuncs, traceProvider.Shutdown)
+	// create metric
+	metric := tmetric.New(tmetric.Config{
+		ServiceName:          t.serviceName,
+		HttpExporterEndpoint: t.httpExporterEndpoint,
+		GrpcExporterEndpoint: t.grpcExporterEndpoint,
+		HttpExporterPath:     t.httpExporterPath,
+	}).WithResource(res)
+
+	metric, err = metric.WithGrpcExporter(ctx)
+	if err != nil {
+		return nil, err
+	}
+	metric, err = metric.WithHttpExporter(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	meterProvider := metric.CreateMetricProvider()
+
+	shutDownFuncs = append(shutDownFuncs, traceProvider.Shutdown, meterProvider.Shutdown)
+
+	otel.SetMeterProvider(meterProvider)
 
 	return
 }

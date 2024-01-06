@@ -6,7 +6,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
@@ -26,7 +25,7 @@ type Trace struct {
 	grpcExporterEndpoint string
 	httpExporterEndpoint string
 
-	exporter []trace.SpanExporter
+	exporter []sdktrace.SpanExporter
 }
 
 func New(cfg Config) Trace {
