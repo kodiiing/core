@@ -1,22 +1,22 @@
-package auth_stub
+package auth
 
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
+	"log"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type AuthenticationServiceError struct {
 	StatusCode int
-	Error      error
+	Error error
 }
 
 type LoginRequest struct {
-	Provider   Provider `json:"provider"`
-	AccessCode string   `json:"access_code"`
+	Provider Provider `json:"provider"`
+	AccessCode string `json:"access_code"`
 }
 
 type LoginResponse struct {
@@ -31,10 +31,10 @@ type EmptyResponse struct {
 }
 
 type Provider uint32
-
 const (
-	ProviderGITHUB Provider = 0
-	ProviderGITLAB Provider = 1
+	PROVIDER_UNSPECIFIED Provider = 0
+	PROVIDER_GITHUB Provider = 1
+	PROVIDER_GITLAB Provider = 2
 )
 
 type AuthenticationServiceServer interface {

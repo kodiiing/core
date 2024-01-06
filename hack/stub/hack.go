@@ -9,22 +9,22 @@ package hack
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
+	"log"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type HackServiceError struct {
 	StatusCode int
-	Error      error
+	Error error
 }
 
 type CreateRequest struct {
-	Title string         `json:"title"`
-	Text  string         `json:"text"`
-	Tags  []string       `json:"tags"`
-	Auth  Authentication `json:"auth"`
+	Title string `json:"title"`
+	Text string `json:"text"`
+	Tags []string `json:"tags"`
+	Auth Authentication `json:"auth"`
 }
 
 type CreateResponse struct {
@@ -32,37 +32,37 @@ type CreateResponse struct {
 }
 
 type UpvoteRequest struct {
-	Id   string         `json:"id"`
+	Id string `json:"id"`
 	Auth Authentication `json:"auth"`
 }
 
 type UpvoteResponse struct {
-	Upvoted bool  `json:"upvoted"`
-	Score   int64 `json:"score"`
+	Upvoted bool `json:"upvoted"`
+	Score int64 `json:"score"`
 }
 
 type CommentRequest struct {
-	HackId   string         `json:"hack_id"`
-	ParentId string         `json:"parent_id"`
-	Text     string         `json:"text"`
-	Auth     Authentication `json:"auth"`
+	HackId string `json:"hack_id"`
+	ParentId string `json:"parent_id"`
+	Text string `json:"text"`
+	Auth Authentication `json:"auth"`
 }
 
 type CommentResponse struct {
-	HackId    string `json:"hack_id"`
+	HackId string `json:"hack_id"`
 	CommentId string `json:"comment_id"`
 }
 
 type ListRequest struct {
-	Page   uint32       `json:"page"`
+	Page uint32 `json:"page"`
 	SortBy SortCriteria `json:"sort_by"`
 }
 
 type ListResponse struct {
-	Hacks        []Hack `json:"hacks"`
+	Hacks []Hack `json:"hacks"`
 	TotalResults uint64 `json:"total_results"`
-	CurrentPage  uint32 `json:"current_page"`
-	TotalPage    uint32 `json:"total_page"`
+	CurrentPage uint32 `json:"current_page"`
+	TotalPage uint32 `json:"total_page"`
 }
 
 type Authentication struct {
@@ -70,38 +70,37 @@ type Authentication struct {
 }
 
 type Author struct {
-	Name       string `json:"name"`
+	Name string `json:"name"`
 	ProfileUrl string `json:"profile_url"`
 	PictureUrl string `json:"picture_url"`
 }
 
 type Hack struct {
-	Id        string    `json:"id"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	Upvotes   int64     `json:"upvotes"`
-	Author    Author    `json:"author"`
-	Comments  []Comment `json:"comments"`
-	CreatedAt string    `json:"created_at"`
-	UpdatedAt string    `json:"updated_at"`
+	Id string `json:"id"`
+	Title string `json:"title"`
+	Content string `json:"content"`
+	Upvotes int64 `json:"upvotes"`
+	Author Author `json:"author"`
+	Comments []Comment `json:"comments"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 type Comment struct {
-	Id        string    `json:"id"`
-	Content   string    `json:"content"`
-	Author    Author    `json:"author"`
-	Replies   []Comment `json:"replies"`
-	CreatedAt string    `json:"created_at"`
+	Id string `json:"id"`
+	Content string `json:"content"`
+	Author Author `json:"author"`
+	Replies []Comment `json:"replies"`
+	CreatedAt string `json:"created_at"`
 }
 
 type SortCriteria uint32
-
 const (
-	SortCriteriaSORT_CRITERIA_UNSPECIFIED  SortCriteria = 0
-	SortCriteriaSORT_CRITERIA_SCORE        SortCriteria = 1
-	SortCriteriaSORT_CRITERIA_COMMENTS     SortCriteria = 2
-	SortCriteriaSORT_CRITERIA_CREATED_DATE SortCriteria = 3
-	SortCriteriaSORT_CRITERIA_UPDATED_DATE SortCriteria = 4
+	SORT_CRITERIA_UNSPECIFIED SortCriteria = 0
+	SORT_CRITERIA_SCORE SortCriteria = 1
+	SORT_CRITERIA_COMMENTS SortCriteria = 2
+	SORT_CRITERIA_CREATED_DATE SortCriteria = 3
+	SORT_CRITERIA_UPDATED_DATE SortCriteria = 4
 )
 
 type HackServiceServer interface {

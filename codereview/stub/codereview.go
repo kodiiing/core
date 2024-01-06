@@ -3,15 +3,15 @@ package codereview
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
+	"log"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type CodeReviewServiceError struct {
 	StatusCode int
-	Error      error
+	Error error
 }
 
 type AvailableTaskToReviewRequest struct {
@@ -23,27 +23,27 @@ type AvailableTaskToReviewResponse struct {
 }
 
 type SubmitTaskReviewRequest struct {
-	Auth         Authentication `json:"auth"`
-	TaskAnswerId string         `json:"task_answer_id"`
-	Content      string         `json:"content"`
+	Auth Authentication `json:"auth"`
+	TaskAnswerId string `json:"task_answer_id"`
+	Content string `json:"content"`
 }
 
 type SubmitTaskReviewResponse struct {
-	TaskAnswerId string     `json:"task_answer_id"`
-	Feedback     []Feedback `json:"feedback"`
+	TaskAnswerId string `json:"task_answer_id"`
+	Feedback []Feedback `json:"feedback"`
 }
 
 type SubmitReviewCommentRequest struct {
-	Auth           Authentication `json:"auth"`
-	TaskAnswerId   string         `json:"task_answer_id"`
-	FeedbackId     string         `json:"feedback_id"`
-	ConversationId string         `json:"conversation_id"`
-	Content        string         `json:"content"`
+	Auth Authentication `json:"auth"`
+	TaskAnswerId string `json:"task_answer_id"`
+	FeedbackId string `json:"feedback_id"`
+	ConversationId string `json:"conversation_id"`
+	Content string `json:"content"`
 }
 
 type SubmitReviewCommentResponse struct {
-	TaskAnswerId string     `json:"task_answer_id"`
-	Feedback     []Feedback `json:"feedback"`
+	TaskAnswerId string `json:"task_answer_id"`
+	Feedback []Feedback `json:"feedback"`
 }
 
 type ApplyAsReviewerRequest struct {
@@ -58,45 +58,45 @@ type Authentication struct {
 }
 
 type Task struct {
-	Id                string `json:"id"`
-	Title             string `json:"title"`
-	Description       string `json:"description"`
-	Difficulty        string `json:"difficulty"`
-	Completed         bool   `json:"completed"`
-	Content           string `json:"content"`
-	Author            string `json:"author"`
-	CompletedAt       string `json:"completed_at"`
-	SatisfactionLevel int32  `json:"satisfaction_level"`
+	Id string `json:"id"`
+	Title string `json:"title"`
+	Description string `json:"description"`
+	Difficulty string `json:"difficulty"`
+	Completed bool `json:"completed"`
+	Content string `json:"content"`
+	Author string `json:"author"`
+	CompletedAt string `json:"completed_at"`
+	SatisfactionLevel int32 `json:"satisfaction_level"`
 }
 
 type Author struct {
-	Name       string `json:"name"`
+	Name string `json:"name"`
 	ProfileUrl string `json:"profile_url"`
 	PictureUrl string `json:"picture_url"`
 }
 
 type TaskAnswer struct {
-	Id          string `json:"id"`
-	UserId      string `json:"user_id"`
-	UserName    string `json:"user_name"`
+	Id string `json:"id"`
+	UserId string `json:"user_id"`
+	UserName string `json:"user_name"`
 	SubmittedAt string `json:"submitted_at"`
-	Content     string `json:"content"`
-	Task        Task   `json:"task"`
+	Content string `json:"content"`
+	Task Task `json:"task"`
 }
 
 type Conversation struct {
-	Id        string `json:"id"`
-	Author    Author `json:"author"`
-	Content   string `json:"content"`
+	Id string `json:"id"`
+	Author Author `json:"author"`
+	Content string `json:"content"`
 	CreatedAt string `json:"created_at"`
 }
 
 type Feedback struct {
-	Id            string         `json:"id"`
-	Author        Author         `json:"author"`
-	Content       string         `json:"content"`
+	Id string `json:"id"`
+	Author Author `json:"author"`
+	Content string `json:"content"`
 	Conversations []Conversation `json:"conversations"`
-	CreatedAt     string         `json:"created_at"`
+	CreatedAt string `json:"created_at"`
 }
 
 type CodeReviewServiceServer interface {

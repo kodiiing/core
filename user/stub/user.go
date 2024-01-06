@@ -3,24 +3,24 @@ package user
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
+	"log"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type UserServiceError struct {
 	StatusCode int
-	Error      error
+	Error error
 }
 
 type OnboardingRequest struct {
-	Reason      JoinReason     `json:"reason"`
-	ReasonOther string         `json:"reason_other"`
-	CodedBefore bool           `json:"coded_before"`
-	Languages   []string       `json:"languages"`
-	Target      string         `json:"target"`
-	Auth        Authentication `json:"auth"`
+	Reason JoinReason `json:"reason"`
+	ReasonOther string `json:"reason_other"`
+	CodedBefore bool `json:"coded_before"`
+	Languages []string `json:"languages"`
+	Target string `json:"target"`
+	Auth Authentication `json:"auth"`
 }
 
 type EmptyResponse struct {
@@ -31,14 +31,13 @@ type Authentication struct {
 }
 
 type JoinReason uint32
-
 const (
-	JoinReasonJOIN_REASON_UNSPECIFIED JoinReason = 0
-	JoinReasonJOIN_REASON_SCHOOL      JoinReason = 1
-	JoinReasonJOIN_REASON_WORK        JoinReason = 2
-	JoinReasonJOIN_REASON_FASCINATED  JoinReason = 3
-	JoinReasonJOIN_REASON_FRIEND      JoinReason = 4
-	JoinReasonJOIN_REASON_OTHER       JoinReason = 5
+	JOIN_REASON_UNSPECIFIED JoinReason = 0
+	JOIN_REASON_SCHOOL JoinReason = 1
+	JOIN_REASON_WORK JoinReason = 2
+	JOIN_REASON_FASCINATED JoinReason = 3
+	JOIN_REASON_FRIEND JoinReason = 4
+	JOIN_REASON_OTHER JoinReason = 5
 )
 
 type UserServiceServer interface {
