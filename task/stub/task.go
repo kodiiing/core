@@ -4,20 +4,20 @@ package task
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
+	"log"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type TaskServiceError struct {
 	StatusCode int
-	Error      error
+	Error error
 }
 
 type ListTasksRequest struct {
-	Auth    Authentication `json:"auth"`
-	TrackId string         `json:"track_id"`
+	Auth Authentication `json:"auth"`
+	TrackId string `json:"track_id"`
 }
 
 type ListTasksResponse struct {
@@ -25,8 +25,8 @@ type ListTasksResponse struct {
 }
 
 type StartTaskRequest struct {
-	Auth   Authentication `json:"auth"`
-	TaskId string         `json:"task_id"`
+	Auth Authentication `json:"auth"`
+	TaskId string `json:"task_id"`
 }
 
 type StartTaskResponse struct {
@@ -34,21 +34,21 @@ type StartTaskResponse struct {
 }
 
 type ExecuteCodeRequest struct {
-	Auth   Authentication `json:"auth"`
-	TaskId string         `json:"task_id"`
-	Code   string         `json:"code"`
+	Auth Authentication `json:"auth"`
+	TaskId string `json:"task_id"`
+	Code string `json:"code"`
 }
 
 type ExecuteCodeResponse struct {
-	Output          string     `json:"output"`
-	TestCases       []TestCase `json:"test_cases"`
-	AllowedToSubmit bool       `json:"allowed_to_submit"`
+	Output string `json:"output"`
+	TestCases []TestCase `json:"test_cases"`
+	AllowedToSubmit bool `json:"allowed_to_submit"`
 }
 
 type SubmitTaskRequest struct {
-	Auth       Authentication `json:"auth"`
-	TaskId     string         `json:"task_id"`
-	Submission string         `json:"submission"`
+	Auth Authentication `json:"auth"`
+	TaskId string `json:"task_id"`
+	Submission string `json:"submission"`
 }
 
 type SubmitTaskResponse struct {
@@ -56,23 +56,23 @@ type SubmitTaskResponse struct {
 }
 
 type PostTaskAssessmentRequest struct {
-	Auth              Authentication `json:"auth"`
-	TaskId            string         `json:"task_id"`
-	SatisfactionLevel int32          `json:"satisfaction_level"`
-	Comments          string         `json:"comments"`
+	Auth Authentication `json:"auth"`
+	TaskId string `json:"task_id"`
+	SatisfactionLevel int32 `json:"satisfaction_level"`
+	Comments string `json:"comments"`
 }
 
 type EmptyResponse struct {
 }
 
 type SubmitTaskFeedbackRequest struct {
-	Auth     Authentication `json:"auth"`
-	TaskId   string         `json:"task_id"`
-	Feedback string         `json:"feedback"`
+	Auth Authentication `json:"auth"`
+	TaskId string `json:"task_id"`
+	Feedback string `json:"feedback"`
 }
 
 type SubmitTaskFeedbackResponse struct {
-	TaskId   string     `json:"task_id"`
+	TaskId string `json:"task_id"`
 	Feedback []Feedback `json:"feedback"`
 }
 
@@ -81,39 +81,38 @@ type Authentication struct {
 }
 
 type Task struct {
-	Id                string         `json:"id"`
-	Title             string         `json:"title"`
-	Description       string         `json:"description"`
-	Difficulty        TaskDifficulty `json:"difficulty"`
-	Completed         bool           `json:"completed"`
-	Content           string         `json:"content"`
-	Author            string         `json:"author"`
-	CompletedAt       string         `json:"completed_at"`
-	SatisfactionLevel int32          `json:"satisfaction_level"`
+	Id string `json:"id"`
+	Title string `json:"title"`
+	Description string `json:"description"`
+	Difficulty TaskDifficulty `json:"difficulty"`
+	Completed bool `json:"completed"`
+	Content string `json:"content"`
+	Author string `json:"author"`
+	CompletedAt string `json:"completed_at"`
+	SatisfactionLevel int32 `json:"satisfaction_level"`
 }
 
 type TestCase struct {
-	Input    string `json:"input"`
+	Input string `json:"input"`
 	Expected string `json:"expected"`
-	Output   string `json:"output"`
-	Success  bool   `json:"success"`
-	Hidden   bool   `json:"hidden"`
+	Output string `json:"output"`
+	Success bool `json:"success"`
+	Hidden bool `json:"hidden"`
 }
 
 type Feedback struct {
-	AuthorId   string `json:"author_id"`
+	AuthorId string `json:"author_id"`
 	AuthorName string `json:"author_name"`
-	Content    string `json:"content"`
-	Timestamp  int64  `json:"timestamp"`
+	Content string `json:"content"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 type TaskDifficulty uint32
-
 const (
-	TaskDifficultyTASK_DIFFICULTY_UNSPECIFIED TaskDifficulty = 0
-	TaskDifficultyTASK_DIFFICULTY_EASY        TaskDifficulty = 1
-	TaskDifficultyTASK_DIFFICULTY_MEDIUM      TaskDifficulty = 2
-	TaskDifficultyTASK_DIFFICULTY_HARD        TaskDifficulty = 3
+	TASK_DIFFICULTY_UNSPECIFIED TaskDifficulty = 0
+	TASK_DIFFICULTY_EASY TaskDifficulty = 1
+	TASK_DIFFICULTY_MEDIUM TaskDifficulty = 2
+	TASK_DIFFICULTY_HARD TaskDifficulty = 3
 )
 
 type TaskServiceServer interface {
