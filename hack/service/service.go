@@ -13,11 +13,11 @@ import (
 type HackService struct {
 	environment string
 	db          *sql.DB
-	pool 		*pgxpool.Pool
+	pool        *pgxpool.Pool
 	search      *typesense.Client
 }
 
-func NewHackService(env string, pool *pgxpool.Pool, search *typesense.Client) *HackService {
+func NewHackService(env string, pool *pgxpool.Pool, search *typesense.Client) hack_stub.HackServiceServer {
 	return &HackService{environment: env, pool: pool, search: search}
 }
 

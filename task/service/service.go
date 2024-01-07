@@ -1,11 +1,11 @@
 package service
 
 import (
+	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"kodiiing/auth"
 	taskRepository "kodiiing/task/repository"
-	"log"
-
-	"github.com/jackc/pgx/v5/pgxpool"
+	task_stub "kodiiing/task/stub"
 )
 
 type TaskService struct {
@@ -15,26 +15,26 @@ type TaskService struct {
 	taskRepository *taskRepository.Repository
 }
 
-type Dependency struct {
+type Config struct {
 	Pool           *pgxpool.Pool
 	Authentication auth.Authenticate
 	TaskRepository *taskRepository.Repository
 }
 
-func NewTaskService(d *Dependency) *TaskService {
-	if d.Pool == nil {
-		log.Fatal("[x] database connection required on task/service module")
+func NewTaskService(config *Config) (task_stub.TaskServiceServer, error) {
+	if config.Pool == nil {
+		return nil, fmt.Errorf("database connection required on task/service module")
 	}
-	if d.Authentication == nil {
-		log.Fatal("[x] authentication service required on task/service module")
+	if config.Authentication == nil {
+		return nil, fmt.Errorf("authentication service required on task/service module")
 	}
-	if d.TaskRepository == nil {
-		log.Fatal("[x] taskRepository required on task/service module")
+	if config.TaskRepository == nil {
+		return nil, fmt.Errorf("taskRepository required on task/service module")
 	}
 
 	return &TaskService{
-		pool:           d.Pool,
-		authentication: d.Authentication,
-		taskRepository: d.TaskRepository,
-	}
+		pool:           config.Pool,
+		authentication: config.Authentication,
+		taskRepository: config.TaskRepository,
+	}, nil
 }

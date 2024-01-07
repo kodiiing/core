@@ -18,7 +18,7 @@ type UserService struct {
 	authentication        auth.Authenticate
 }
 
-func NewUserService(env string, userProfileRepository *user_profile.Repository) *UserService {
+func NewUserService(env string, userProfileRepository *user_profile.Repository) user_stub.UserServiceServer {
 	return &UserService{environment: env, userProfileRepository: userProfileRepository}
 }
 
@@ -60,7 +60,7 @@ func (d *UserService) Onboarding(ctx context.Context, req *user_stub.OnboardingR
 		HasCodedBefore:  req.CodedBefore,
 		Languages:       req.Languages,
 		Target:          req.Target,
-		UpdatedAt:       time.Time{},
+		UpdatedAt:       time.Now(),
 		UpdatedBy:       "system",
 	})
 	if err != nil {
