@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"kodiiing/telemetry"
 	"kodiiing/user/user_profile"
 	"net/http"
 	"os"
@@ -139,10 +140,26 @@ func ApiServer(ctx context.Context) error {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 
+	// telemetry
+	telemetryProvider := telemetry.NewTelemetryProvider(telemetry.Config{
+		ServiceName:          "kodiiing",
+		GrpcExporterEndpoint: config.Otel.ReceiverOtlpGrpcEndpoint,
+		HttpExporterEndpoint: config.Otel.ReceiverOtlpHttpEndpoint,
+	})
+
 	go func() {
-		log.Printf("Listening on port: %s", config.Port)
+		log.Info().Msgf("Listening on port: %s", config.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("error during listening server: %v", err)
+			log.Info().Msgf("error during listening server: %v", err)
+		}
+	}()
+
+	var telemetryShutDownFuncs []telemetry.ShutDownFunc
+	go func() {
+		log.Info().Msg("initializing telemetry")
+		telemetryShutDownFuncs, err = telemetryProvider.Run(context.Background())
+		if err != nil {
+			log.Fatal().Err(err).Msg("initializing telemetry")
 		}
 	}()
 
@@ -153,6 +170,13 @@ func ApiServer(ctx context.Context) error {
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("error during shutting down server: %v", err)
+	}
+
+	for _, shutDownFunc := range telemetryShutDownFuncs {
+		err := shutDownFunc(shutdownCtx)
+		if err != nil {
+			log.Error().Err(err).Msg("shutdown telemetry...")
+		}
 	}
 
 	return nil
