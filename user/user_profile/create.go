@@ -32,7 +32,7 @@ func (u *Repository) Create(ctx context.Context, profile UserProfile) error {
 		profile.JoinReason,
 		sql.NullString{
 			String: profile.JoinReasonOther,
-			Valid:  profile.JoinReason != user_stub.JoinReasonOther,
+			Valid:  profile.JoinReason != user_stub.JOIN_REASON_OTHER,
 		},
 		profile.HasCodedBefore,
 		sql.NullString{

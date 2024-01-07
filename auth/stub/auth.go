@@ -3,20 +3,21 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	"net/http"
+	"kodiiing/auth"
 	"log"
+	"net/http"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type AuthenticationServiceError struct {
 	StatusCode int
-	Error error
+	Error      error
 }
 
 type LoginRequest struct {
-	Provider Provider `json:"provider"`
-	AccessCode string `json:"access_code"`
+	Provider   Provider `json:"provider"`
+	AccessCode string   `json:"access_code"`
 }
 
 type LoginResponse struct {
@@ -31,15 +32,17 @@ type EmptyResponse struct {
 }
 
 type Provider uint32
+
 const (
 	PROVIDER_UNSPECIFIED Provider = 0
-	PROVIDER_GITHUB Provider = 1
-	PROVIDER_GITLAB Provider = 2
+	PROVIDER_GITHUB      Provider = 1
+	PROVIDER_GITLAB      Provider = 2
 )
 
 type AuthenticationServiceServer interface {
 	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, *AuthenticationServiceError)
 	Logout(ctx context.Context, req *LogoutRequest) (*EmptyResponse, *AuthenticationServiceError)
+	GetUserById(ctx context.Context, id int64) (auth.User, error)
 }
 
 func NewAuthenticationServiceServer(implementation AuthenticationServiceServer) *chi.Mux {
