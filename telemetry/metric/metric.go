@@ -5,7 +5,6 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/sdk/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -28,7 +27,7 @@ type Metric struct {
 
 	resource *resource.Resource
 
-	exporter []metric.Exporter
+	exporterFuncs []func(context.Context) (sdkmetric.Exporter, error)
 }
 
 func New(cfg Config) *Metric {
@@ -41,18 +40,20 @@ func New(cfg Config) *Metric {
 	}
 }
 
-func (m *Metric) WithGrpcExporter(ctx context.Context) (*Metric, error) {
-	exp, err := otlpmetricgrpc.New(ctx,
-		otlpmetricgrpc.WithEndpoint(m.grpcExporterEndpoint),
-		otlpmetricgrpc.WithCompressor("gzip"),
-	)
-	if err != nil {
-		return m, err
-	}
+func (m *Metric) WithGrpcExporter() *Metric {
+	m.exporterFuncs = append(m.exporterFuncs, func(ctx context.Context) (sdkmetric.Exporter, error) {
+		exp, err := otlpmetricgrpc.New(ctx,
+			otlpmetricgrpc.WithEndpoint(m.grpcExporterEndpoint),
+			otlpmetricgrpc.WithCompressor("gzip"),
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	m.exporter = append(m.exporter, exp)
+		return exp, nil
+	})
 
-	return m, nil
+	return m
 }
 
 func (m *Metric) WithResource(res *resource.Resource) *Metric {
@@ -60,22 +61,24 @@ func (m *Metric) WithResource(res *resource.Resource) *Metric {
 	return m
 }
 
-func (m *Metric) WithHttpExporter(ctx context.Context) (*Metric, error) {
-	exp, err := otlpmetrichttp.New(ctx,
-		otlpmetrichttp.WithEndpoint(m.httpExporterEndpoint),
-		otlpmetrichttp.WithURLPath(m.httpExporterPath),
-		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-	)
-	if err != nil {
-		return m, err
-	}
+func (m *Metric) WithHttpExporter() *Metric {
+	m.exporterFuncs = append(m.exporterFuncs, func(ctx context.Context) (sdkmetric.Exporter, error) {
+		exp, err := otlpmetrichttp.New(ctx,
+			otlpmetrichttp.WithEndpoint(m.httpExporterEndpoint),
+			otlpmetrichttp.WithURLPath(m.httpExporterPath),
+			otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	m.exporter = append(m.exporter, exp)
+		return exp, nil
+	})
 
-	return m, nil
+	return m
 }
 
-func (m *Metric) CreateMetricProvider() *sdkmetric.MeterProvider {
+func (m *Metric) CreateMetricProvider(ctx context.Context) (*sdkmetric.MeterProvider, error) {
 	if m.resource == nil {
 		m.resource = newDefaultResource(m.serviceName)
 	}
@@ -84,13 +87,18 @@ func (m *Metric) CreateMetricProvider() *sdkmetric.MeterProvider {
 		sdkmetric.WithResource(m.resource),
 	}
 
-	for _, exp := range m.exporter {
+	for _, exporterFunc := range m.exporterFuncs {
+		exp, err := exporterFunc(ctx)
+		if err != nil {
+			return nil, err
+		}
+
 		opts = append(opts, sdkmetric.WithReader(
 			sdkmetric.NewPeriodicReader(exp),
 		))
 	}
 
-	return sdkmetric.NewMeterProvider(opts...)
+	return sdkmetric.NewMeterProvider(opts...), nil
 }
 
 func newDefaultResource(serviceName string) *resource.Resource {

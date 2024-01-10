@@ -77,18 +77,12 @@ func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFu
 		HttpExporterEndpoint: t.httpExporterEndpoint,
 		GrpcExporterEndpoint: t.grpcExporterEndpoint,
 		HttpExporterPath:     t.httpExporterPath,
-	}).WithResource(res)
+	}).WithResource(res).WithGrpcExporter().WithHttpExporter()
 
-	metric, err = metric.WithGrpcExporter(ctx)
+	meterProvider, err := metric.CreateMetricProvider(ctx)
 	if err != nil {
 		return nil, err
 	}
-	metric, err = metric.WithHttpExporter(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	meterProvider := metric.CreateMetricProvider()
 
 	shutDownFuncs = append(shutDownFuncs, traceProvider.Shutdown, meterProvider.Shutdown)
 

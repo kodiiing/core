@@ -3,6 +3,7 @@ package user_profile
 import (
 	"context"
 	"fmt"
+
 	"github.com/jackc/pgx/v5"
 )
 
