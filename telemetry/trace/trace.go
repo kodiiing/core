@@ -26,7 +26,7 @@ type Trace struct {
 
 	resource *resource.Resource
 
-	exporter []trace.SpanExporter
+	exporterFuncs []func(context.Context) (trace.SpanExporter, error)
 }
 
 func New(cfg Config) *Trace {
@@ -37,30 +37,34 @@ func New(cfg Config) *Trace {
 	}
 }
 
-func (t *Trace) WithGrpcExporter(ctx context.Context) (*Trace, error) {
-	exp, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(t.grpcExporterEndpoint),
-	)
-	if err != nil {
-		return t, err
-	}
+func (t *Trace) WithGrpcExporter() *Trace {
+	t.exporterFuncs = append(t.exporterFuncs, func(ctx context.Context) (trace.SpanExporter, error) {
+		exp, err := otlptracegrpc.New(ctx,
+			otlptracegrpc.WithEndpoint(t.grpcExporterEndpoint),
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	t.exporter = append(t.exporter, exp)
+		return exp, nil
+	})
 
-	return t, nil
+	return t
 }
 
-func (t *Trace) WithHttpExporter(ctx context.Context) (*Trace, error) {
-	exp, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithEndpoint(t.httpExporterEndpoint),
-	)
-	if err != nil {
-		return t, err
-	}
+func (t *Trace) WithHttpExporter() *Trace {
+	t.exporterFuncs = append(t.exporterFuncs, func(ctx context.Context) (trace.SpanExporter, error) {
+		exp, err := otlptracehttp.New(ctx,
+			otlptracehttp.WithEndpoint(t.httpExporterEndpoint),
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	t.exporter = append(t.exporter, exp)
+		return exp, nil
+	})
 
-	return t, nil
+	return t
 }
 
 func (t *Trace) WithResource(res *resource.Resource) *Trace {
@@ -68,7 +72,7 @@ func (t *Trace) WithResource(res *resource.Resource) *Trace {
 	return t
 }
 
-func (t *Trace) CreateTraceProvider() *sdktrace.TracerProvider {
+func (t *Trace) CreateTraceProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	if t.resource == nil {
 		t.resource = newDefaultResource(t.serviceName)
 	}
@@ -77,11 +81,16 @@ func (t *Trace) CreateTraceProvider() *sdktrace.TracerProvider {
 		sdktrace.WithResource(t.resource),
 	}
 
-	for _, exp := range t.exporter {
+	for _, exporterFunc := range t.exporterFuncs {
+		exp, err := exporterFunc(ctx)
+		if err != nil {
+			return nil, err
+		}
+
 		opts = append(opts, sdktrace.WithBatcher(exp))
 	}
 
-	return sdktrace.NewTracerProvider(opts...)
+	return sdktrace.NewTracerProvider(opts...), nil
 }
 
 func newDefaultResource(serviceName string) *resource.Resource {
