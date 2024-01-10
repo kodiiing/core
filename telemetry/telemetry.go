@@ -6,6 +6,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 type ShutDownFunc func(context.Context) error
@@ -32,6 +34,12 @@ func NewTelemetryProvider(cfg Config) *telemetryProvider {
 }
 
 func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFunc, err error) {
+	// resource
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName(t.serviceName),
+	)
+
 	// propagator
 	propagator := propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
@@ -43,7 +51,7 @@ func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFu
 		ServiceName:          t.serviceName,
 		GrpcExporterEndpoint: t.grpcExporterEndpoint,
 		HttpExporterEndpoint: t.httpExporterEndpoint,
-	})
+	}).WithResource(res)
 
 	trace, err = trace.WithGrpcExporter(ctx)
 	if err != nil {
