@@ -2,10 +2,12 @@ package service
 
 import (
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"kodiiing/auth"
 	taskRepository "kodiiing/task/repository"
 	task_stub "kodiiing/task/stub"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel"
 )
 
 type TaskService struct {
@@ -20,6 +22,8 @@ type Config struct {
 	Authentication auth.Authenticate
 	TaskRepository *taskRepository.Repository
 }
+
+var tracer = otel.Tracer("kodiiing/task/service")
 
 func NewTaskService(config *Config) (task_stub.TaskServiceServer, error) {
 	if config.Pool == nil {
