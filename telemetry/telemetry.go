@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	tmetric "kodiiing/telemetry/metric"
 	ttrace "kodiiing/telemetry/trace"
 
 	"go.opentelemetry.io/otel"
@@ -17,12 +18,14 @@ type Config struct {
 
 	GrpcExporterEndpoint string
 	HttpExporterEndpoint string
+	HttpExporterPath     string
 }
 
 type telemetryProvider struct {
 	serviceName          string
 	grpcExporterEndpoint string
 	httpExporterEndpoint string
+	httpExporterPath     string
 }
 
 func NewTelemetryProvider(cfg Config) *telemetryProvider {
@@ -30,6 +33,7 @@ func NewTelemetryProvider(cfg Config) *telemetryProvider {
 		serviceName:          cfg.ServiceName,
 		grpcExporterEndpoint: cfg.GrpcExporterEndpoint,
 		httpExporterEndpoint: cfg.HttpExporterEndpoint,
+		httpExporterPath:     cfg.HttpExporterPath,
 	}
 }
 
@@ -61,7 +65,22 @@ func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFu
 	otel.SetTracerProvider(traceProvider)
 	otel.SetTextMapPropagator(propagator)
 
-	shutDownFuncs = append(shutDownFuncs, traceProvider.Shutdown)
+	// create metric
+	metric := tmetric.New(tmetric.Config{
+		ServiceName:          t.serviceName,
+		HttpExporterEndpoint: t.httpExporterEndpoint,
+		GrpcExporterEndpoint: t.grpcExporterEndpoint,
+		HttpExporterPath:     t.httpExporterPath,
+	}).WithResource(res).WithGrpcExporter().WithHttpExporter()
+
+	meterProvider, err := metric.CreateMetricProvider(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	shutDownFuncs = append(shutDownFuncs, traceProvider.Shutdown, meterProvider.Shutdown)
+
+	otel.SetMeterProvider(meterProvider)
 
 	return
 }
