@@ -61,10 +61,6 @@ func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFu
 	if err != nil {
 		return
 	}
-	trace, err = trace.WithHttpExporter(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	otel.SetTracerProvider(traceProvider)
 	otel.SetTextMapPropagator(propagator)
