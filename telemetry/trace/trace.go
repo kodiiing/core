@@ -41,6 +41,8 @@ func (t *Trace) WithGrpcExporter() *Trace {
 	t.exporterFuncs = append(t.exporterFuncs, func(ctx context.Context) (trace.SpanExporter, error) {
 		exp, err := otlptracegrpc.New(ctx,
 			otlptracegrpc.WithEndpoint(t.grpcExporterEndpoint),
+			// TODO: remove this if needed
+			otlptracegrpc.WithInsecure(),
 		)
 		if err != nil {
 			return nil, err
@@ -56,6 +58,8 @@ func (t *Trace) WithHttpExporter() *Trace {
 	t.exporterFuncs = append(t.exporterFuncs, func(ctx context.Context) (trace.SpanExporter, error) {
 		exp, err := otlptracehttp.New(ctx,
 			otlptracehttp.WithEndpoint(t.httpExporterEndpoint),
+			// TODO: remove this if needed
+			otlptracehttp.WithInsecure(),
 		)
 		if err != nil {
 			return nil, err

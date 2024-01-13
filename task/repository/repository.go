@@ -7,6 +7,7 @@ import (
 	task_stub "kodiiing/task/stub"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel"
 )
 
 type Task struct {
@@ -29,6 +30,8 @@ type Repository struct {
 type Dependency struct {
 	DB *pgxpool.Pool
 }
+
+var tracer = otel.Tracer("kodiiing/task/repository")
 
 func NewTaskRepository(d *Dependency) *Repository {
 	if d.DB == nil {
