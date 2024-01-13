@@ -55,18 +55,16 @@ func (t *telemetryProvider) Run(ctx context.Context) (shutDownFuncs []ShutDownFu
 		ServiceName:          t.serviceName,
 		GrpcExporterEndpoint: t.grpcExporterEndpoint,
 		HttpExporterEndpoint: t.httpExporterEndpoint,
-	})
+	}).WithResource(res).WithGrpcExporter().WithHttpExporter()
 
-	trace, err = trace.WithGrpcExporter(ctx)
+	traceProvider, err := trace.CreateTraceProvider(ctx)
 	if err != nil {
-		return nil, err
+		return
 	}
 	trace, err = trace.WithHttpExporter(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	traceProvider := trace.CreateTraceProvider()
 
 	otel.SetTracerProvider(traceProvider)
 	otel.SetTextMapPropagator(propagator)

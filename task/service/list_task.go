@@ -13,12 +13,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *TaskService) ListTasks(ctx context.Context, req task_stub.ListTaskRequest) (*task_stub.ListTaskResponse, *task_stub.TaskServiceError) {
-	// authenticate user
+func (s *TaskService) ListTasks(ctx context.Context, req *task_stub.ListTasksRequest) (*task_stub.ListTasksResponse, *task_stub.TaskServiceError) {
+	// Authenticate user
 	authenticatedUser, err := s.authentication.Authenticate(ctx, req.Auth.AccessToken)
 	if err != nil {
 		if errors.Is(err, auth.ErrParameterEmpty) || errors.Is(err, auth.ErrUserNotFound) {
-			return &task_stub.ListTaskResponse{}, &task_stub.TaskServiceError{
+			return &task_stub.ListTasksResponse{}, &task_stub.TaskServiceError{
 				StatusCode: http.StatusUnauthorized,
 				Error:      fmt.Errorf("unauthenticated: %w", err),
 			}
@@ -35,7 +35,7 @@ func (s *TaskService) ListTasks(ctx context.Context, req task_stub.ListTaskReque
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &task_stub.TaskServiceError{
-				StatusCode: http.StatusNotFound,
+				StatusCode: http.StatusBadRequest,
 				Error:      fmt.Errorf("task not found"),
 			}
 		}
@@ -46,17 +46,17 @@ func (s *TaskService) ListTasks(ctx context.Context, req task_stub.ListTaskReque
 		}
 	}
 
-	var responseData task_stub.ListTaskResponse
+	var responseData task_stub.ListTasksResponse
 	for _, task := range tasks {
 		taskData := task_stub.Task{
-			Id:                 fmt.Sprintf("%d", task.Task.Id),
-			Title:              task.Task.Title,
-			Description:        task.Task.Description,
-			Difficulty:         task.Task.Difficulty,
-			Completed:          task.Completed,
-			Content:            task.Task.Content,
-			Author:             task.Task.Author,
-			StatisfactionLevel: int32(task.SatisfactionLevel),
+			Id:                fmt.Sprintf("%d", task.Task.Id),
+			Title:             task.Task.Title,
+			Description:       task.Task.Description,
+			Difficulty:        task.Task.Difficulty,
+			Completed:         task.Completed,
+			Content:           task.Task.Content,
+			Author:            task.Task.Author,
+			SatisfactionLevel: int32(task.SatisfactionLevel),
 		}
 		if task.CompletedAt.Valid {
 			taskData.CompletedAt = task.CompletedAt.Time.Format(time.RFC3339)

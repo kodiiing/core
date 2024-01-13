@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"kodiiing/auth"
 	auth_jwt "kodiiing/auth/jwt"
-	auth_service "kodiiing/auth/service"
+	auth_stub "kodiiing/auth/stub"
 )
 
 type AuthMiddleware struct {
 	jwt     *auth_jwt.AuthJwt
-	service *auth_service.AuthService
+	service auth_stub.AuthenticationServiceServer
 }
 
-func NewAuthMiddleware(service *auth_service.AuthService, jwt *auth_jwt.AuthJwt) *AuthMiddleware {
+func NewAuthMiddleware(service auth_stub.AuthenticationServiceServer, jwt *auth_jwt.AuthJwt) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwt:     jwt,
 		service: service,

@@ -13,9 +13,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *TaskService) StartTask(ctx context.Context, req task_stub.StartTaskRequest) (*task_stub.StartTaskResponse, *task_stub.TaskServiceError) {
-	// authenticate user
-	autenticatedUser, err := s.authentication.Authenticate(ctx, req.Auth.AccessToken)
+func (s *TaskService) StartTask(ctx context.Context, req *task_stub.StartTaskRequest) (*task_stub.StartTaskResponse, *task_stub.TaskServiceError) {
+	// Authenticate user
+	authenticatedUser, err := s.authentication.Authenticate(ctx, req.Auth.AccessToken)
 	if err != nil {
 		if errors.Is(err, auth.ErrParameterEmpty) || errors.Is(err, auth.ErrUserNotFound) {
 			return &task_stub.StartTaskResponse{}, &task_stub.TaskServiceError{
@@ -33,15 +33,15 @@ func (s *TaskService) StartTask(ctx context.Context, req task_stub.StartTaskRequ
 	taskId, err := strconv.ParseInt(req.TaskId, 10, 64)
 	if err != nil {
 		return &task_stub.StartTaskResponse{}, &task_stub.TaskServiceError{
-			StatusCode: 400,
+			StatusCode: http.StatusBadRequest,
 			Error:      fmt.Errorf("invalid task id"),
 		}
 	}
-	task, err := s.taskRepository.StartTask(ctx, autenticatedUser.ID, taskId)
+	task, err := s.taskRepository.StartTask(ctx, authenticatedUser.ID, taskId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &task_stub.TaskServiceError{
-				StatusCode: http.StatusNotFound,
+				StatusCode: http.StatusBadRequest,
 				Error:      fmt.Errorf("task not found"),
 			}
 		}
@@ -54,14 +54,14 @@ func (s *TaskService) StartTask(ctx context.Context, req task_stub.StartTaskRequ
 
 	responseData := task_stub.StartTaskResponse{
 		Task: task_stub.Task{
-			Id:                 fmt.Sprintf("%d", task.Task.Id),
-			Title:              task.Task.Title,
-			Description:        task.Task.Description,
-			Difficulty:         task.Task.Difficulty,
-			Completed:          task.Completed,
-			Content:            task.Task.Content,
-			Author:             task.Task.Author,
-			StatisfactionLevel: int32(task.SatisfactionLevel),
+			Id:                fmt.Sprintf("%d", task.Task.Id),
+			Title:             task.Task.Title,
+			Description:       task.Task.Description,
+			Difficulty:        task.Task.Difficulty,
+			Completed:         task.Completed,
+			Content:           task.Task.Content,
+			Author:            task.Task.Author,
+			SatisfactionLevel: int32(task.SatisfactionLevel),
 		},
 	}
 	if task.CompletedAt.Valid {

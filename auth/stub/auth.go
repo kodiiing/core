@@ -1,8 +1,9 @@
-package auth_stub
+package auth
 
 import (
 	"context"
 	"encoding/json"
+	"kodiiing/auth"
 	"log"
 	"net/http"
 
@@ -33,13 +34,15 @@ type EmptyResponse struct {
 type Provider uint32
 
 const (
-	ProviderGITHUB Provider = 0
-	ProviderGITLAB Provider = 1
+	PROVIDER_UNSPECIFIED Provider = 0
+	PROVIDER_GITHUB      Provider = 1
+	PROVIDER_GITLAB      Provider = 2
 )
 
 type AuthenticationServiceServer interface {
 	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, *AuthenticationServiceError)
 	Logout(ctx context.Context, req *LogoutRequest) (*EmptyResponse, *AuthenticationServiceError)
+	GetUserById(ctx context.Context, id int64) (auth.User, error)
 }
 
 func NewAuthenticationServiceServer(implementation AuthenticationServiceServer) *chi.Mux {
